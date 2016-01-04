@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Moon Lander</title>
+    <script type="text/javascript" src="desenhar.js"></script>
+    <script type="text/javascript" src="teclado.js"></script>
+</head>
+<body>
+<h1>Moon Lander</h1>
+
+<canvas width="400" height="300">
+    Seu navegador nao tem suporte ao canvas!
+</canvas>
+
+<script>
+    var tela = document.getElementsByTagName("canvas")[0];
+    var ctx = tela.getContext("2d");
+    var fps = 60;
+    var y = 130, vy = 0, ay = 0;
+    var x = 130, vx = 0, ax = 0;
+    var dt = 1/fps;
+    var alvoY = 150;
+    var alvoX = 150;
+
+    var vidas = 3;
+    var gravidade = 10;
+    var vento = 10;
+    var limiteVento = 50;
+    var combustivelInicial = 300;
+    var combustivel = combustivelInicial;
+
+    var porcentagemGastoCombustivel = 0.1;
+    var numeroNiveis = 10;
+    var nivel = new Array(10);
+    var nivelAtual = 0;
+
+    nivel[0] = porcentagemGastoCombustivel;
+    for(var i=1;i<numeroNiveis; i++){
+        nivel[i] = nivel[i-1] + porcentagemGastoCombustivel;
+    }
+
+    addEventListener("keydown", teclaPressionada);
+    addEventListener("keyup", teclaSolta);
+    setInterval(desenhar, 1000/fps);
+</script>
+
+
+
+</body>
+</html>
