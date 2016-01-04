@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Space Invader</title>
+    <script type="text/javascript" src="desenhar.js"></script>
+    <script type="text/javascript" src="teclado.js"></script>
+    <script type="text/javascript" src="imagens.js"></script>
+</head>
+<body>
+<h1>Space Invader</h1>
+
+<canvas width="400" height="300" style = "background:url(espaco.jpg) no-repeat">
+    Seu navegador nao tem suporte ao canvas!
+</canvas>
+
+<script>
+    var tela = document.getElementsByTagName("canvas")[0];
+    var ctx = tela.getContext("2d");
+    var fps = 60;
+    var g = 50;
+    var dt = 1/fps;
+
+    var vidas = 4;
+    var pontos = 0;
+    var energia = 300;
+
+    var bullet = new Array();
+    var inimigos = new Array();
+    var bulletInimigo = new Array();
+
+    var intervaloTiroNave = 20;
+    var frequenciaTiroNave = 10;
+    var intervaloTiroInimigo = 10000;
+    var frequenciaTiroInimigo = 196;
+    var velocidadeInimigo = 0.8;
+    var maxVelocidadeTiroNave = 3;
+    var minVelocidadeTiroNave = 1.5;
+    var maxVelocidadeTiroInimigo = 3;
+    var minVelocidadeTiroInimigo = 1.5;
+    var imgBala = "bullet";
+
+    var imagens = new BancoDeImagens();
+    imagens.add("ship","player_ship.png");
+    imagens.add("enemy1","enemy_1.png");
+    imagens.add("enemy2","enemy_2.png");
+    imagens.add("enemy3","enemy_3.png");
+    imagens.add("bullet", "bullet_green.png");
+
+    var nave = new SpriteNave(184, 265);
+    var inimigo1 = new SpriteInimigos(0,100,-300,0,"enemy1");
+    var inimigo2 = new SpriteInimigos(100,200,-300,0,"enemy2");
+    var inimigo3 = new SpriteInimigos(200,300,-300,0,"enemy3");
+    var inimigo4 = new SpriteInimigos(300,400,-300,0,"enemy1");
+
+    inimigos.push(inimigo1);
+    inimigos.push(inimigo2);
+    inimigos.push(inimigo3);
+    inimigos.push(inimigo4);
+
+    addEventListener("keydown", teclado.teclaPressionada);
+    addEventListener("keyup", teclado.teclaSolta);
+    setInterval(desenhar, 1000/fps);
+</script>
+
+
+
+</body>
+</html>
