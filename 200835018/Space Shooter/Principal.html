@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Exemplo Animaçao com Controle</title>
+	</head>
+	<body>
+		<canvas width="600" height="600">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+		<script>
+		
+		/*------------------------------------------------------------------------------------------------------------------*/
+
+		function BancoDeImagens(){
+		  this.imagens = {};
+		  
+		  this.add = function(nome,url){
+			  this.imagens[nome] = new Image();
+			  this.imagens[nome].src = url;
+		  };
+		  
+		  this.desenhaXY = function(ctx,nome,x,y,dw,dh){
+			  ctx.drawImage(this.imagens[nome],x,y,dw,dh);
+		  };
+		  
+		  this.desenhaXY2 = function(ctx,nome,x,y){
+			  ctx.drawImage(this.imagens[nome],x,y);
+		  };
+
+		  this.desenha = function(ctx,nome,x,y,w,h,dx,dy,dw,dh){
+			  ctx.drawImage(this.imagens[nome],x,y,w,h,dx,dy,dw,dh);
+		  };
+		} 
+
+		var imagens = new BancoDeImagens();
+		
+		/*A linha abaixo, adicioa um único arquivo de uma só vez. Esse arquivo possui todos os sprites do jogo. Com isso, será
+		feito, mais tarde, um corte nessa imagem, pegando apenas o sprite que eu quero*/
+		//imagens.add("sheet","Star1.png");
+		imagens.add("hero","Star1.png");
+		imagens.add("inimigo1","enemy_1.png");
+        imagens.add("tiro","sprite_fire.png");	
+		imagens.add("background","Grid2.png");	
+		imagens.add("inimigo2","enemy_2.png");
+		imagens.add("inimigo3","enemy_3.png");
+		imagens.add("inimigo4","Titan2.png"); 
+		imagens.add("tiro2","Light.png");
+		
+		/*------------------------------------------------------------------------------------------------------------------*/
+
+		var teclado = {
+			esquerda: false,
+			direita: false,
+			cima: false,
+			baixo: false,
+			space: false,
+			ctrl: false
+		};
+		
+		teclado.teclaPressionada = function(e){
+			switch (e.keyCode){
+				case 37: 
+					teclado.esquerda = true;
+				break;
+				case 38: 
+					teclado.cima = true;
+				break;
+				case 39: 
+					teclado.direita = true;
+				break;
+				case 40: 
+					teclado.baixo = true;
+				break;
+				case 32: 
+					teclado.space = true;
+				break;
+				case 17: 
+					teclado.ctrl = true;
+				break;
+				default:
+					console.log(e.keyCode);
+			}
+		};
+		
+		teclado.teclaSolta = function(e){
+			switch (e.keyCode){
+				case 37: 
+					teclado.esquerda = false;
+				break;
+				case 38: 
+					teclado.cima = false;
+				break;
+				case 39: 
+					teclado.direita = false;
+				break;
+				case 40: 
+					teclado.baixo = false;
+				break;
+				case 32: 
+					teclado.space = false;
+				break;
+			}
+		};
+		
+		function Sprite(){
+		
+			this.x = 130;
+			this.y = 523;
+			this.vx = 0;
+			this.vy = 0;
+			//this.ax = 0;
+			//this.ay = 0;
+			//largura do sprite.
+			this.w = 30;
+			//altura do sprite.
+			this.h = 40;
+			this.angulo = 0;
+			
+			this.mover = function(dt){
+				this.x = this.x + this.vx*dt;
+				this.y = this.y + this.vy*dt;
+			};
+			
+			this.desenhar = function(ctx){
+				ctx.save();
+
+				ctx.strokeStyle = "black";
+				ctx.fillStyle = "rgb(250, 150, 150)";
+
+				ctx.translate(this.x, this.y);
+				ctx.rotate(this.angulo);
+				
+				ctx.beginPath();
+				
+				ctx.moveTo(-this.w/2, this.h/2);
+				ctx.lineTo(this.w/2, this.h/2);
+				ctx.lineTo(0, -this.h/2);
+				
+				ctx.closePath();
+				ctx.fill();
+				ctx.stroke();
+				
+				ctx.restore();
+			};
+			
+			this.desenharTiro = function(ctx){
+			    this.w = 50;
+				imagens.desenhaXY(ctx,"tiro2",this.x,this.y,30,30);
+			};
+			
+			this.controlar = function(){};
+			
+			this.controlarTiro = function(veloc_tiro){
+				this.vy = -veloc_tiro;
+			}
+			
+            /*Função que controla a colisão dos objetos do jogo.*/ 			
+			this.colidiuCom = function(alvo){
+			
+				//Não está colidindo.
+				if(this.x > alvo.x + alvo.w){
+					return false;
+				} 
+				if(this.x + this.w < alvo.x){
+					return false;
+				} 
+				if(this.y > alvo.y + alvo.h){
+					return false;
+				} 
+				if(this.y + this.h < alvo.y){
+					return false; 
+				} 
+				  
+				//Qualquer outro caso, está colidindo.
+				return true;
+			};
+			
+		};
+		
+		/*------------------------------------------------------------------------------------------------------------------*/
+
+		var tela = document.getElementsByTagName("canvas")[0];
+		var ctx = tela.getContext("2d");
+		var ctxGO = tela.getContext("2d");
+
+		var fps = 60;
+		var dt = 1/fps;
+		
+		//Variáveis da HUD.
+	    var score = 0;
+	    var fullenergy = 300;
+	    var energia = fullenergy;
+	    var life = 2;
+		
+		//Variável para encerrar o game.
+		var gameOver = false;
+		
+		//Vetor para auxiliar na geração das posições aleatórias (em x) do inimigo.
+		var posX_Inimigo_Vet = new Array(2, 5, 50, 150, 200, 297,400,550);
+		//Vetor para auxiliar na geração das posições aleatórias (em y) do inimigo.
+		var posY_Inimigo_Vet = new Array(-70, -450, -150, -100, -350, -200);
+		//Variável para auxiliar na geração das posições (direção x) aleatórias do inimigo.
+		var geraInimigoPos_X;
+		//Variável para auxiliar na geração das posições (direção y) aleatórias do inimigo.
+		var geraInimigoPos_Y;
+		
+		//Variáveis que controlam as velocidades dos inimigos e a área que são atingidos.
+		var velInimigo1 = 300;
+		var velInimigo2 = 350;
+		var velInimigo3 = 400;
+		var velInimigo4 = 500;
+		var foi_atingido = 40;
+
+		var nave = new Sprite();
+		nave.tiro = false;
+	    nave.intervaloTiro = 0;
+		var tiros = [];
+		var velTiro = 200;
+		
+		nave.controlar = function(t){
+			if((teclado.direita) && (gameOver == false)){
+				this.vx = 200;
+			}else if((teclado.esquerda) && (gameOver == false)){
+					this.vx = -200;
+			}else{
+				this.vx = 0;
+			}
+			
+			if((teclado.cima) && (gameOver == false)) {
+				this.vy = -200;
+			}else if((teclado.baixo) && (gameOver == false)){
+					this.vy = 200;
+			}else{
+				this.vy = 0;
+			}
+			
+			if((teclado.space) && (gameOver == false)){
+				nave.tiro = true;
+			}else{
+				nave.tiro = false;
+			}
+			
+			/*Reinicia o game se o jogador apertar Ctrl, após o Game Over.*/
+			if((teclado.ctrl) && (life == 0)){
+				gameOver = false;
+				nave.y = 523;
+				nave.x = 130;
+				energia = fullenergy;
+				score = 0;
+				life = 2;
+			}else{
+				teclado.ctrl = false;
+			}
+		};
+
+        nave.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"hero",this.x,this.y,70,70);
+        };
+		
+		var background = new Sprite(); 
+		
+		background.x = 0;
+		background.y = -50;
+		
+		background.controlar = function(){
+			this.vy = 500;
+		};
+		
+		background.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"background",this.x,this.y,600,1000);
+		}
+
+		var inimigo1 = new Sprite();
+		//Gera a posição inicial do inimigo.
+		geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+		inimigo1.x = geraInimigoPos_X;
+		inimigo1.y = geraInimigoPos_Y; 
+		inimigo1.w = foi_atingido;
+		inimigo1.h = foi_atingido;
+		
+        //O inimigo só se movimenta verticalmente, com velocidade constante e aleatória.		
+		inimigo1.controlar = function(){
+			this.vy = velInimigo1;
+		};
+
+		inimigo1.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"inimigo1",this.x,this.y,50,50);
+		};
+		
+		var inimigo2 = new Sprite();
+		//Gera a posição inicial do inimigo.
+		geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+		inimigo2.x = geraInimigoPos_X;
+		inimigo2.y = geraInimigoPos_Y; 
+		inimigo2.w = foi_atingido;
+		inimigo2.h = foi_atingido;
+		
+        //O inimigo só se movimenta verticalmente, com velocidade constante e aleatória.		
+		inimigo2.controlar = function(){
+			this.vy = velInimigo2;
+		};
+
+		inimigo2.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"inimigo2",this.x,this.y,50,50);
+		};
+		
+		var inimigo3 = new Sprite();
+		//Gera a posição inicial do inimigo.
+		geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+		inimigo3.x = geraInimigoPos_X;
+		inimigo3.y = geraInimigoPos_Y;
+		inimigo3.w = foi_atingido;
+		inimigo3.h = foi_atingido;
+		
+        //O inimigo só se movimenta verticalmente, com velocidade constante e aleatória.		
+		inimigo3.controlar = function(){
+			this.vy = velInimigo1;
+		};
+
+		inimigo3.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"inimigo1",this.x,this.y,50,50);
+		};
+		
+		var inimigo4 = new Sprite();
+		//Gera a posição inicial do inimigo.
+		geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+		inimigo4.x = geraInimigoPos_X;
+		inimigo4.y = geraInimigoPos_Y;
+		inimigo4.w = foi_atingido;
+		inimigo4.h = foi_atingido;
+		
+        //O inimigo só se movimenta verticalmente, com velocidade constante e aleatória.		
+		inimigo4.controlar = function(){
+			this.vy = velInimigo2;
+		};
+
+		inimigo4.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"inimigo2",this.x,this.y,50,50);
+		};
+		
+		var inimigo5 = new Sprite();
+		//Gera a posição inicial do inimigo.
+		geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+		inimigo5.x = geraInimigoPos_X;
+		inimigo5.y = geraInimigoPos_Y;
+		inimigo5.w = foi_atingido;
+		inimigo5.h = foi_atingido;
+		
+        //O inimigo só se movimenta verticalmente, com velocidade constante e aleatória.		
+		inimigo5.controlar = function(){
+			this.vy = velInimigo1;
+		};
+
+		inimigo5.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"inimigo1",this.x,this.y,50,50);
+		};
+		
+		var inimigo6 = new Sprite();
+		//Gera a posição inicial do inimigo.
+		geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+		inimigo6.x = geraInimigoPos_X;
+		inimigo6.y = geraInimigoPos_Y;
+		inimigo6.w = foi_atingido;
+		inimigo6.h = foi_atingido;
+		
+        //O inimigo só se movimenta verticalmente, com velocidade constante e aleatória.		
+		inimigo6.controlar = function(){
+			this.vy = velInimigo3;
+		};
+
+		inimigo6.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"inimigo3",this.x,this.y,50,50);
+		};
+		
+		var inimigo7 = new Sprite();
+		//Gera a posição inicial do inimigo.
+		geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+		inimigo7.x = geraInimigoPos_X;
+		inimigo7.y = geraInimigoPos_Y;
+		inimigo7.w = foi_atingido;
+		inimigo7.h = foi_atingido;
+		
+        //O inimigo só se movimenta verticalmente, com velocidade constante e aleatória.		
+		inimigo7.controlar = function(){
+			this.vy = velInimigo4;
+		};
+
+		inimigo7.desenhar = function(ctx){
+			imagens.desenhaXY(ctx,"inimigo4",this.x,this.y,50,50);
+		};
+		
+		/*------------------------------------------------------------------------------------------------------------------*/
+
+		addEventListener("keydown", teclado.teclaPressionada);
+		addEventListener("keyup", teclado.teclaSolta);
+
+		setInterval(passo, 1000/fps);
+			
+		function passo(){
+		
+			background.controlar();
+			nave.controlar();
+			inimigo1.controlar();
+			inimigo2.controlar();
+			inimigo3.controlar();
+			inimigo4.controlar();
+			inimigo5.controlar();
+			inimigo6.controlar();
+			inimigo7.controlar();
+
+			background.mover(dt);
+			
+			if(background.y > 10){
+				background.x = 0;
+				background.y = -100;
+			}
+			
+			nave.mover(dt);
+			inimigo1.mover(dt);
+			inimigo2.mover(dt);
+			inimigo3.mover(dt);
+			inimigo4.mover(dt);
+			inimigo5.mover(dt);
+			inimigo6.mover(dt);
+			inimigo7.mover(dt);
+		
+			ctx.clearRect(0,0, tela.width, tela.height);
+			
+			background.desenhar(ctx);
+			nave.desenhar(ctx);
+			inimigo1.desenhar(ctx);
+			inimigo2.desenhar(ctx);
+			inimigo3.desenhar(ctx);
+			inimigo4.desenhar(ctx);
+			inimigo5.desenhar(ctx);
+			inimigo6.desenhar(ctx);
+			inimigo7.desenhar(ctx);
+			
+			/*Desenhando a informação de Game Over na tela.*/
+			if(life == 0){
+				ctxGO.fillStyle = "rgb(100,149,237)";
+				ctxGO.font = "30px arial";
+				ctxGO.fillText("Game Over",210,300);
+				ctxGO.fillStyle = "rgb(100,149,237)";
+				ctxGO.font = "15px arial";
+				ctxGO.fillText("(Aperte Ctrl para reiniciar o jogo.)",180,320);
+			}
+			
+			/*Desenha o tiro, configura-o e o movimenta na tela.*/
+			if(nave.tiro && nave.intervaloTiro <= 0){
+				var tiro = new Sprite();
+				tiro.w = 10;
+				tiro.h = 10;
+				tiro.angulo = nave.angulo;
+				tiro.x = nave.x + 20;
+				tiro.y = nave.y - 9;
+				
+				/*Essa linha, auxilia na retirada do Tiro, da memória do jogo.*/
+				tiros.push(tiro);
+				
+				nave.intervaloTiro = 1/3; // 3 tiros por segundo.
+			}
+			
+			nave.intervaloTiro -= 1*dt;
+			
+			tiros.forEach(function(t){	
+				t.controlarTiro(velTiro);
+				t.mover(dt);
+				t.desenharTiro(ctx);
+				
+				/*Colisões dos tiros com os inimigos. */
+				
+				if(inimigo1.colidiuCom(t)){
+					geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+					inimigo1.x = geraInimigoPos_X;
+					inimigo1.y = geraInimigoPos_Y;
+					inimigo1.vy = velInimigo1;
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+					score = score + 10;
+				
+					if(score % 100 == 0){
+						life = life + 1;
+					}
+				
+				} else if(inimigo2.colidiuCom(t)){
+					geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+					inimigo2.x = geraInimigoPos_X;
+					inimigo2.y = geraInimigoPos_Y;
+					geraVel_Inimigo = vel_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					inimigo2.vy = velInimigo2;
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+					score = score + 10;
+					
+					if(score % 100 == 0){
+						life = life + 1;
+					}
+					
+				} else if(inimigo3.colidiuCom(t)){
+					geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+					inimigo3.x = geraInimigoPos_X;
+					inimigo3.y = geraInimigoPos_Y;
+					geraVel_Inimigo = vel_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					inimigo3.vy = velInimigo1;
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+					score = score + 10;
+					
+					if(score % 100 == 0){
+						life = life + 1;
+					}
+					
+				} else if(inimigo4.colidiuCom(t)){
+					geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+					inimigo4.x = geraInimigoPos_X;
+					inimigo4.y = geraInimigoPos_Y;
+					inimigo4.vy = velInimigo2;
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+					score = score + 10;
+					
+					if(score % 100 == 0){
+						life = life + 1;
+					}
+					
+				} else if(inimigo5.colidiuCom(t)){
+					geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+					inimigo5.x = geraInimigoPos_X;
+					inimigo5.y = geraInimigoPos_Y;
+					inimigo5.vy = velInimigo1;
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+					score = score + 10;
+					
+					if(score % 100 == 0){
+						life = life + 1;
+					}
+					
+				} else if(inimigo6.colidiuCom(t)){
+					geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+					inimigo6.x = geraInimigoPos_X;
+					inimigo6.y = geraInimigoPos_Y;
+					inimigo6.vy = velInimigo3;
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+					score = score + 10;
+					
+					if(score % 100 == 0){
+						life = life + 1;
+					}
+					
+				} else if(inimigo7.colidiuCom(t)){
+					geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+					geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+					inimigo7.x = geraInimigoPos_X;
+					inimigo7.y = geraInimigoPos_Y;
+					inimigo7.vy = velInimigo4;
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+					score = score + 50;
+					
+					if(score % 100 == 0){
+						life = life + 1;
+					}
+				}
+				
+				//Retirando o tira da memória do jogo.
+				if(t.y < 0 || t.y > tela.height || t.x < 0 || t.x > tela.width){
+					tiros.splice(tiros.indexOf(t), 1);
+				}
+			});
+			
+			/*Desenhando a HUD:*/
+					 
+			//Escolhendo a cor do desenho.
+			ctx.fillStyle = "white";
+			//Desenhando o retângulo, que representa a HUD.
+			ctx.fillRect(0,0,600,27);
+			//Contornando a região retangular.
+			ctx.strokeStyle = "green";
+			//Aumentando a linha de contorno
+			ctx.lineWidth = 2;
+			ctx.strokeRect(0,0,600,27); 
+			 
+			/*Desenhando os elementos da HUD:*/
+			 
+			ctx.fillStyle = "Blue";
+			ctx.font = "15px verdana";
+			ctx.fillText("SCORE:",3,18);
+			 
+			ctx.fillStyle = "Brown";
+			ctx.font = "15px verdana";
+			ctx.fillText(score,67,18);
+			 
+			ctx.fillStyle = "Blue";
+			ctx.font = "15px verdana";
+			ctx.fillText("Fuel:",130,18);
+			 
+			/*Criando a barra de combustível.*/
+			ctx.fillStyle = "blue";
+			ctx.strokeStyle = "black";
+			ctx.lineWidth = 2.2;
+			ctx.beginPath();				 
+			ctx.rect(175,5,energia,18);
+			ctx.closePath();
+			ctx.fill();
+			ctx.stroke(); 
+			 
+			ctx.fillStyle = "Blue";
+			ctx.font = "15px verdana";
+			ctx.fillText("Life:",535,18);
+			 
+			ctx.fillStyle = "Brown";
+			ctx.font = "15px verdana";
+			ctx.fillText(life,575,18);
+			
+			/*Mandar as naves inimigas para outros lugares da tela, se elas sairem do limite inferior da mesma.*/
+			if(inimigo1.y > 526){
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		        geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo1.x = geraInimigoPos_X;
+				inimigo1.y = geraInimigoPos_Y;
+			    inimigo1.vy = velInimigo1;
+			}
+			if(inimigo2.y > 526){
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		        geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo2.x = geraInimigoPos_X;
+				inimigo2.y = geraInimigoPos_Y;
+			    inimigo2.vy = velInimigo2;
+			}
+			if(inimigo3.y > 526){
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		        geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo3.x = geraInimigoPos_X;
+				inimigo3.y = geraInimigoPos_Y;
+			    inimigo3.vy = velInimigo1;
+			}
+			if(inimigo4.y > 526){
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		        geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo4.x = geraInimigoPos_X;
+				inimigo4.y = geraInimigoPos_Y;
+			    inimigo4.vy = velInimigo2;
+			}
+			if(inimigo5.y > 526){
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		        geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo5.x = geraInimigoPos_X;
+				inimigo5.y = geraInimigoPos_Y;
+			    inimigo5.vy = velInimigo1;
+			}
+			if(inimigo6.y > 526){
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		        geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo6.x = geraInimigoPos_X;
+				inimigo6.y = geraInimigoPos_Y;
+			    inimigo6.vy = velInimigo3;
+			}
+			if(inimigo7.y > 526){
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+		        geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo7.x = geraInimigoPos_X;
+				inimigo7.y = geraInimigoPos_Y;
+			    inimigo7.vy = velInimigo4;
+			}
+			
+			/*Colisões da nave com os inimigos. */
+				
+			if(inimigo1.colidiuCom(nave)){
+			
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+				geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo1.x = geraInimigoPos_X;
+				inimigo1.y = geraInimigoPos_Y;
+				inimigo1.vy = velInimigo1;
+			
+				energia = energia - 10;
+				
+				//Cria o efeito de explosão na tela.
+				ctx.fillStyle = "red";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if(energia == 0){
+					life = life - 1;
+					
+					if(life == 0){
+						gameOver = true;
+						nave.x = -60;
+						nave.y = -30;
+					}else{
+						energia = fullenergy;
+					}
+				}
+			
+			} 
+			if(inimigo2.colidiuCom(nave)){
+			
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+				geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo2.x = geraInimigoPos_X;
+				inimigo2.y = geraInimigoPos_Y;
+				inimigo2.vy = velInimigo2;
+			
+				energia = energia - 15;
+				
+				//Cria o efeito de explosão na tela.
+				ctx.fillStyle = "red";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if (energia < 0){
+					energia = 0;
+				}
+			
+				if(energia == 0){
+					life = life - 1;
+					
+					if(life == 0){
+						gameOver = true;
+						nave.x = -60;
+						nave.y = -30;
+					}else{
+						energia = fullenergy;
+					}
+				}
+				
+			}
+			if(inimigo3.colidiuCom(nave)){
+			
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+				geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo3.x = geraInimigoPos_X;
+				inimigo3.y = geraInimigoPos_Y;
+				inimigo3.vy = velInimigo1;
+			
+				energia = energia - 15;
+				
+				//Cria o efeito de explosão na tela.
+				ctx.fillStyle = "red";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if (energia < 0){
+					energia = 0;
+				}
+			
+				if(energia == 0){
+					life = life - 1;
+					
+					if(life == 0){
+						gameOver = true;
+						nave.x = -60;
+						nave.y = -30;
+					}else{
+						energia = fullenergy;
+					}
+				}
+				
+			}
+			if(inimigo4.colidiuCom(nave)){
+			
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+				geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo4.x = geraInimigoPos_X;
+				inimigo4.y = geraInimigoPos_Y;
+				inimigo4.vy = velInimigo2;
+			
+				energia = energia - 20;
+				
+				//Cria o efeito de explosão na tela.
+				ctx.fillStyle = "red";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if (energia < 0){
+					energia = 0;
+				}
+			
+				if(energia == 0){
+					life = life - 1;
+					
+					if(life == 0){
+						gameOver = true;
+						nave.x = -60;
+						nave.y = -30;
+					}else{
+						energia = fullenergy;
+					}
+				}
+				
+			}
+			if(inimigo5.colidiuCom(nave)){
+			
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+				geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo5.x = geraInimigoPos_X;
+				inimigo5.y = geraInimigoPos_Y;
+				inimigo5.vy = velInimigo1;
+			
+				energia = energia - 30;
+				
+				//Cria o efeito de explosão na tela.
+				ctx.fillStyle = "red";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if (energia < 0){
+					energia = 0;
+				}
+			
+				if(energia == 0){
+					life = life - 1;
+					
+					if(life == 0){
+						gameOver = true;
+						nave.x = -60;
+						nave.y = -30;
+					}else{
+						energia = fullenergy;
+					}
+				}
+				
+			}
+			if(inimigo6.colidiuCom(nave)){
+			
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+				geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo6.x = geraInimigoPos_X;
+				inimigo6.y = geraInimigoPos_Y;
+				inimigo6.vy = velInimigo3;
+			
+				energia = energia - 40;
+				
+				//Cria o efeito de explosão na tela.
+				ctx.fillStyle = "red";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if (energia < 0){
+					energia = 0;
+				}
+			
+				if(energia == 0){
+					life = life - 1;
+					
+					if(life == 0){
+						gameOver = true;
+						nave.x = -60;
+						nave.y = -30;
+					}else{
+						energia = fullenergy;
+					}
+				}
+				
+			}
+			if(inimigo7.colidiuCom(nave)){
+			
+				geraInimigoPos_X = posX_Inimigo_Vet[Math.floor(Math.random() * 8)];
+				geraInimigoPos_Y = posY_Inimigo_Vet[Math.floor(Math.random() * 6)];
+				inimigo7.x = geraInimigoPos_X;
+				inimigo7.y = geraInimigoPos_Y;
+				inimigo7.vy = velInimigo4;
+			
+				energia = energia - 70;
+				
+				//Cria o efeito de explosão na tela.
+				ctx.fillStyle = "red";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if (energia < 0){
+					energia = 0;
+				}
+			
+				if(energia == 0){
+					life = life - 1;
+					
+					if(life == 0){
+						gameOver = true;
+						nave.x = -60;
+						nave.y = -30;
+					}else{
+						energia = fullenergy;
+					}
+				}
+			}
+			
+			/*Cria os limites que a nave pode percorrer na tela.*/
+			
+			//Parar a nave no limite inferior da tela. 
+			if(nave.y > 523){
+				nave.y = 523;
+				nave.vy = 0;
+			}
+			
+			//Parar a nave no limite superior da tela.
+		    if((nave.y <= 29) && (gameOver == false)){
+				//vx = 0;
+				nave.vy = 0; 
+				nave.y = 29;
+		    }
+
+			//Parar a nave no limite a esquerda da tela.
+			if((nave.x < 4) && (gameOver == false)){
+				nave.vx = 0;
+				nave.x = 4;
+			}
+
+		    //Parar a nave no limite a direita da tela.
+		    if((nave.x > 525) && (gameOver == false)){
+				nave.vx = 0;
+				nave.x = 525;
+		    }
+		}
+		</script>
+	</body>
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+
