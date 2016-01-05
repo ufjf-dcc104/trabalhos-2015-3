@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Exemplo Animaçao com Controle</title>
+	</head>
+	<body>
+		<h1>Exemplo Animaçao com Controle</h1>
+		<canvas width="400" height="500" style="border : 1px solid black" >
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+		<script>
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			var posicaoParede = 395;
+			
+			function Sprite(){
+				this.x = 10;
+				this.y = 50;
+				this.vx = 0;
+				this.ax = 0;
+				this.vy = 0;
+				this.ay = 0;
+				this.w = 40;
+				this.h = 30;
+				
+				
+				this.mover = function(dt,g){
+					
+					
+					
+					this.vy = this.vy + this.ay*dt+g*dt;
+					this.y = this.y + this.vy*dt;
+					
+				};
+				
+				this.desenharNave = function(){
+					
+					var porcentagemTamanho = 0.8;
+					thiswidth = this.w * porcentagemTamanho ;
+					thisheight = this.h * porcentagemTamanho ;
+					thisposX =  this.x + (thiswidth/4);
+					thisposY =  this.y + 4;
+					
+					
+						
+						ctx.save();
+						ctx.strokeStyle = "black";
+						ctx.fillStyle = "rgb(250, 150, 150)";
+						
+						ctx.beginPath();
+						
+						ctx.moveTo(this.x,this.y);
+						ctx.lineTo(this.x, 30+this.y);
+						ctx.lineTo(40+this.x, 15+   this.y);
+						ctx.closePath();
+						ctx.fill();
+						ctx.stroke();
+						
+						ctx.restore();
+						
+						
+				};
+				
+				this.colidiuCom = function(alvo){
+					var porcentagemTamanho = 0.8;
+					
+					
+					thiswidth = this.w * porcentagemTamanho ;
+					thisheight = this.h * porcentagemTamanho ;
+					thisposX =  this.x/2 + (thiswidth/4);
+					thisposY =  this.y + 4;
+
+					alvowidth = alvo.w;
+					
+					if(alvo.h<0){
+						alvoheight = alvo.h * -1;
+						alvoposY = alvo.y + alvo.h ;
+					}else{
+						alvoheight = alvo.h;
+						alvoposY = alvo.y ;
+					
+					}
+					alvoposX = alvo.x ;
+					
+	
+					if(thisposX > alvoposX+alvowidth) return false;
+					if(thisposX+thiswidth < alvoposX) return false;
+					if(thisposY > alvoposY+alvoheight) return false;
+					if(thisposY+thisheight < alvoposY) return false;
+					return true;
+				};
+				
+					
+			
+			};
+			
+			function Parede(yPos){
+				this.x = 400;
+				this.y = yPos;
+				this.w = 10;
+				this.h = 0;
+				this.ax=0;
+				this.vx = 10;
+				
+				this.desenharParede = function(ctx){
+					ctx.fillRect(this.x, this.y, this.w, this.h);
+					ctx.fillRect(this.x, this.y, this.w, this.h);
+				};
+				
+				this.mover = function(dt){
+					
+					this.x = this.x - 120*dt;
+				};
+			
+			
+			}
+			
+			function numeroRandom(){
+				return 10+Math.random()*360;		
+			}
+			
+			var tamPassagem = 100 ;
+			var espacamento = 200;
+			var pontuacao = 0;
+			var pontos = 10;
+			
+			var nave = new Sprite();
+			nave.desenharNave();
+			
+			var parede11 = new Parede(0);
+			parede11.h = numeroRandom();		
+			parede11.desenharParede(ctx);
+			
+			var parede12 = new Parede(500);
+			parede12.h = -(500-(parede11.h+ tamPassagem));
+			parede12.desenharParede(ctx);
+			
+			var parede21 = new Parede(0);
+			parede21.h = numeroRandom();
+			parede21.x = parede11.x + espacamento;					
+			parede21.desenharParede(ctx);
+			
+			var parede22 = new Parede(500);
+			parede22.h = -(500-(parede21.h+ tamPassagem));
+			parede22.x = parede21.x;
+			parede22.desenharParede(ctx);
+			
+			var parede31 = new Parede(0);
+			parede31.h = numeroRandom();
+			parede31.x = parede21.x + espacamento;					
+			parede31.desenharParede(ctx);
+			
+			var parede32 = new Parede(500);
+			parede32.h = -(500-(parede31.h+ tamPassagem));
+			parede32.x = parede31.x;
+			parede32.desenharParede(ctx);
+			
+			var parede41  = new Parede();
+			var parede42 = new Parede();
+
+			var fps = 60;
+			var g = 1300;
+			var y = 50, vy = 0, ay = 0;
+			var x = 10, vx = 0, ax = 0;
+			var dt = 1/fps;
+			var alvoY = 150;
+			var alvoX = 150;
+			var andarParece = 0;
+		
+
+			addEventListener("keydown", teclaPressionada);
+			addEventListener("keyup", teclaSolta);
+
+			setInterval(passo, 1000/fps);
+			setInterval(alterarPosicoesParede,1000);
+			
+			
+			function passo(){
+				ctx.clearRect(0,0, 400, 500);				
+				nave.mover(dt,g);
+				parede11.mover(dt);
+				parede12.mover(dt);
+				parede21.mover(dt);
+				parede22.mover(dt);
+				parede31.mover(dt);
+				parede32.mover(dt);
+				var alturaRandom = numeroRandom();
+							
+				colidiuComAlguem();				
+				
+				if(parede11.x<0){
+					parede11.x = parede31.x+espacamento;
+					parede11.h = alturaRandom;
+					parede12.x = parede11.x;
+					parede12.h = -(500-(parede11.h + tamPassagem));
+					pontuacao = pontuacao + pontos;
+					
+				}
+				
+				if(parede21.x<0){
+					parede21.x = parede11.x + espacamento;;
+					parede21.h = alturaRandom;
+					parede22.x = parede21.x;
+					parede22.h = -(500-(parede21.h + tamPassagem));
+					pontuacao = pontuacao + pontos;
+					
+				}
+				
+				if(parede31.x<0){
+					parede31.x = parede21.x + espacamento;
+					parede31.h = alturaRandom;
+					parede32.x = parede31.x;
+					parede32.h = -(500-(parede31.h + tamPassagem));	
+					pontuacao = pontuacao + pontos;				
+				}
+				
+				if(nave.y>500 || nave.y<-15){
+				
+					reiniciarJogo();
+					nave = new Sprite();
+				}
+				
+				ctx.fillStyle = "black";
+                ctx.font ="15px Georgia";
+                ctx.fillText("Pontuação: "+pontuacao,30,30);
+				
+				parede11.desenharParede(ctx);
+				parede12.desenharParede(ctx);
+				parede21.desenharParede(ctx);
+				parede22.desenharParede(ctx);
+				parede31.desenharParede(ctx);
+				parede32.desenharParede(ctx);
+				nave.desenharNave();
+					
+			}
+			
+			function colidiuComAlguem(){
+				if(nave.colidiuCom(parede11)){
+					reiniciarJogo();
+				}
+				if(nave.colidiuCom(parede12)){
+					reiniciarJogo();
+				}
+				if(nave.colidiuCom(parede21)){
+					reiniciarJogo();
+				}
+				if(nave.colidiuCom(parede22)){
+					reiniciarJogo();
+				}
+				if(nave.colidiuCom(parede31)){
+					reiniciarJogo();
+				}
+				if(nave.colidiuCom(parede32)){
+						reiniciarJogo();		
+				}
+					
+			}
+			function reiniciarJogo(){
+					alert("Você perdeu. Pontuação: "+pontuacao);
+					pontuacao = 0;
+					reiniciarParedes();	
+			}
+			
+			function reiniciarParedes(){
+				parede11 = new Parede(0);
+				parede11.h = numeroRandom();		
+				parede11.desenharParede(ctx);
+				
+				parede12 = new Parede(500);
+				parede12.h = -(500-(parede11.h+ tamPassagem));
+				parede12.desenharParede(ctx);
+				
+				parede21 = new Parede(0);
+				parede21.h = numeroRandom();
+				parede21.x = parede11.x + espacamento;					
+				parede21.desenharParede(ctx);
+				
+				parede22 = new Parede(500);
+				parede22.h = -(500-(parede21.h+ tamPassagem));
+				parede22.x = parede21.x;
+				parede22.desenharParede(ctx);
+				
+				parede31 = new Parede(0);
+				parede31.h = numeroRandom();
+				parede31.x = parede21.x + espacamento;					
+				parede31.desenharParede(ctx);
+				
+				parede32 = new Parede(500);
+				parede32.h = -(500-(parede31.h+ tamPassagem));
+				parede32.x = parede31.x;
+				parede32.desenharParede(ctx);
+			
+			}
+			
+			function teclaPressionada(e){
+				console.log("Tecla: "+e.keyCode);
+			
+				if(e.keyCode==40){
+					nave.ay = 30;
+				}else if(e.keyCode==38){
+					nave.ay = -30;
+				}
+				if(e.keyCode==32){
+					nave.vy = -370;
+				}
+			}
+			function teclaSolta(e){
+				console.log("Tecla: "+e.keyCode);
+				if(e.keyCode==39){
+					nave.ax = 0;
+				}else if(e.keyCode==37){
+					nave.ax = 0;
+				}
+				if(e.keyCode==40){
+					nave.ay = 0;
+				}else if(e.keyCode==38){
+					nave.ay = 0;
+				}
+			}
+		</script>
+	</body>
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+
