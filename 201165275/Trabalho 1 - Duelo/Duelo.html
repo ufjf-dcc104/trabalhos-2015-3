@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Duelo</title>
+		<script src="Sprite.js"></script>
+	</head>
+	<body>
+		<h1>Duelo</h1>
+		<canvas width="400" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+		</br>
+		<a href="../Trabalho 1 - Space Shooter/Space Shooter.html">SpaceShooter<a> </br>
+		<a href="../Trabalho 1 - Duelo/Duelo.html">Duelo<a> </br>
+		<a href="../Trabalho 1 - Moon Lander/Moon Lander.html">Moonlander<a> </br>
+		<script>
+		
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+
+			var fps = 60;
+			var g = 60;
+			var dt = 1/fps;
+			
+			<!--Definição player1--!>
+			var player1 = new Sprite();
+			player1.tiro = false;
+			player1.intervaloTiro = 0;
+			player1.cor = "blue";
+			player1.x = 50;
+			player1.y = 150;
+			player1.vidas = 3;
+			
+			<!--Definição player2--!>
+			var player2 = new Sprite();
+			player2.tiro = false;
+			player2.intervaloTiro = 0;
+			player2.cor = "red";
+			player2.x = 350;
+			player2.y = 150;
+			player2.angulo = -Math.PI;
+			player2.vidas = 3;
+			
+			var tiros1 = [];
+			var tiros2 = [];
+			var paredes = [];
+			
+			addEventListener("keydown", function(e){
+				console.log("Tecla: " + e.keyCode);
+				if(e.keyCode==37){
+					player1.va = -5;
+				}
+				if(e.keyCode==39){
+					player1.va = 5;
+				}
+				if(e.keyCode==38){
+					player1.velocidade = 80;
+				}
+				if(e.keyCode==16){
+					player1.tiro = true;
+				}
+				if(e.keyCode==65){
+					player2.va = -5
+				}
+				if(e.keyCode==68){
+					player2.va = 5;
+				}
+				if(e.keyCode==87){
+					player2.velocidade = 80;
+				}
+				if(e.keyCode==67){
+					player2.tiro = true;
+				}
+			});
+			addEventListener("keyup", function(e){
+				if(e.keyCode==37){
+					player1.va = 0;
+				}
+				if(e.keyCode==39){
+					player1.va = 0;
+				}
+				if(e.keyCode==38){
+					player1.velocidade = 0;
+				}
+				if(e.keyCode==16){
+					player1.tiro = false;
+				}
+				if(e.keyCode==65){
+					player2.va = 0
+				}
+				if(e.keyCode==68){
+					player2.va = 0;
+				}
+				if(e.keyCode==87){
+					player2.velocidade = 0;
+				}
+				if(e.keyCode==67){
+					player2.tiro = false;
+				}
+			});
+			
+			<!--Definição das paredes--!>
+			var parede1 = new Sprite();
+			parede1.cor = "grey";
+			parede1.x = 190;
+			parede1.y = 80;
+			parede1.w = 20;
+			parede1.h = 140;
+			
+			var parede2 = new Sprite();
+			parede2.cor = "grey";
+			parede2.x = 190;
+			parede2.y = 60;
+			parede2.w = 110;
+			parede2.h = 20;
+			
+			var parede3 = new Sprite();
+			parede3.cor = "grey";
+			parede3.x = 100;
+			parede3.y = 220;
+			parede3.w = 110;
+			parede3.h = 20;
+			
+			var parede4 = new Sprite();
+			parede4.cor = "grey";
+			parede4.x = 80;
+			parede4.y = 1;
+			parede4.w = 10;
+			parede4.h = 50;
+			
+			var parede5 = new Sprite();
+			parede5.cor = "grey";
+			parede5.x = 320;
+			parede5.y = 249;
+			parede5.w = 10;
+			parede5.h = 50;
+			
+			var paredes = [parede1, parede2, parede3, parede4, parede5];
+			
+			setInterval(passo, 1000/fps);
+			
+			function passo(){
+			ctx.fillStyle = "white";
+			ctx.fillRect(0,0, tela.width, tela.height);	
+			
+			player1.mover(dt,0);
+			if(player1.tiro && player1.intervaloTiro<=0){
+				var tiro = new Sprite();
+				tiro.w = 5;
+				tiro.h = 5;
+				tiro.velocidade = 130;
+				tiro.angulo = player1.angulo;
+				tiro.x = player1.x;
+				tiro.y = player1.y;
+				tiros1.push(tiro);
+				player1.intervaloTiro = 1/1; // 5 tiros por segundo
+			}
+			player1.intervaloTiro -= 1*dt;
+			tiros1.forEach(function(t){
+				t.mover(dt,0);	
+				t.desenhar(ctx);
+				if(t.y<0 || t.y > tela.height || t.x<0 || t.x> tela.width){
+					tiros1.splice(tiros1.indexOf(t), 1);
+				}
+				for(a = 0; a < paredes.length; a++){//se tiro colidir com a parede, some
+					if(t.colidiuCom(paredes[a])){
+						tiros1.splice(tiros1.indexOf(t), 1);
+					}
+				}
+			});
+			
+			player2.mover(dt,0);
+			if(player2.tiro && player2.intervaloTiro<=0){
+				var tiro = new Sprite();
+				tiro.w = 5;
+				tiro.h = 5;
+				tiro.velocidade = 130;
+				tiro.angulo = player2.angulo;
+				tiro.x = player2.x;
+				tiro.y = player2.y;
+				tiros2.push(tiro);
+				player2.intervaloTiro = 1/1; // 1 tiro(s) por segundo
+			}
+			player2.intervaloTiro -= 1*dt;
+			tiros2.forEach(function(t){
+				t.mover(dt,0);	
+				t.desenhar(ctx);
+				if(t.y<0 || t.y > tela.height || t.x<0 || t.x> tela.width){
+					tiros2.splice(tiros2.indexOf(t), 1);
+				}
+				for(a = 0; a < paredes.length; a++){//se tiro colidir com a parede, some
+					if(t.colidiuCom(paredes[a])){
+						tiros2.splice(tiros2.indexOf(t), 1);
+					}
+				}
+			});
+			
+			<!--Controle de vida do player 1--!>
+			for(a = 0; a < tiros2.length; a++){//colisão com tiros
+				if(player1.colidiuCom(tiros2[a])){
+					tiros2.splice(tiros2[a], 1);
+					player1.vidas--;
+					player1.x = 50;
+					player1.y = 150;
+					player1.angulo = 0;
+					player2.x = 350;
+					player2.y = 150;
+					player2.angulo = -Math.PI;
+				}
+				if(player1.vidas < 0){
+					player1.vidas = 3;
+					player2.vidas = 3;
+				}
+			}
+			for(a = 0; a < paredes.length; a++){//colisao com paredes
+				if(player1.colidiuCom(paredes[a])){
+					player1.vidas--;
+					player1.x = 50;
+					player1.y = 150;
+					player1.angulo = 0;
+					player2.x = 350;
+					player2.y = 150;
+					player2.angulo = -Math.PI;
+				}
+				if(player1.vidas < 0){
+					player1.vidas = 3;
+					player2.vidas = 3;
+				}
+			}
+			<!--Controle de vida do Player 2--!>
+			for(a = 0; a < tiros1.length; a++){//colisão com tiros
+				if(player2.colidiuCom(tiros1[a])){
+					tiros1.splice(tiros1[a], 1);
+					player2.vidas--;
+					player1.x = 50;
+					player1.y = 150;
+					player1.angulo = 0;
+					player2.x = 350;
+					player2.y = 150;
+					player2.angulo = -Math.PI;
+				}
+				if(player2.vidas < 0){
+					player1.vidas = 3;
+					player2.vidas = 3;
+				}
+			}
+			for(a = 0; a < paredes.length; a++){//colisao com paredes
+				if(player2.colidiuCom(paredes[a])){
+					player2.vidas--;
+					player1.x = 50;
+					player1.y = 150;
+					player1.angulo = 0;
+					player2.x = 350;
+					player2.y = 150;
+					player2.angulo = -Math.PI;
+				}
+				if(player2.vidas < 0){
+					player1.vidas = 3;
+					player2.vidas = 3;
+				}
+			}
+
+			player1.desenhar(ctx);
+			player2.desenhar(ctx);
+			
+			ctx.beginPath();//borda
+			ctx.moveTo(0,0);
+			ctx.lineTo(400,0);
+			ctx.lineTo(400,300);
+			ctx.lineTo(0,300);
+			ctx.closePath();
+			ctx.stroke();
+			
+			<!--Paredes--!>
+			
+			parede1.desenhaParede(ctx);
+			parede2.desenhaParede(ctx);
+			parede3.desenhaParede(ctx);
+			parede4.desenhaParede(ctx);	
+			parede5.desenhaParede(ctx);
+			
+			ctx.fillStyle = "blue"; <!--cor da margem --!>
+			ctx.font = "15px verdana";
+			ctx.beginPath();//vidas player1
+			ctx.fillText("Vidas: " + player1.vidas, 10, 30);
+			ctx.closePath();
+			
+			ctx.fillStyle = "red"; <!--cor da margem --!>
+			ctx.font = "15px verdana";
+			ctx.beginPath();//vidas player2
+			ctx.fillText("Vidas: " + player2.vidas, 320, 30);
+			ctx.closePath();
+
+	}
+		</script>
+	
+	</body>
+</html>
