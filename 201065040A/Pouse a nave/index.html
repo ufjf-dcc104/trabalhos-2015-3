@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>pouse a nave </title>
+    </head>
+    <body>
+        <center>
+        <h1>POUSE A NAVE!!!</h1>
+        <canvas width="400" height="400">
+            navegador nao suporta!!
+        </canvas>
+        </center>
+        <script>
+        var tela = document.getElementsByTagName("canvas")[0];
+        var ctx = tela.getContext("2d");
+            
+        var i = 50 ,v = 10   , a = 70, fps = 50, dt = 1/fps;
+	    var ix = 150, vx = 0,ax = 0 ;
+	    var vento = 0, rdmCount = 0; 
+	    var fuel = 1000, chao = 400, ponto = 0 , vida = 3;
+	    var estado = 0, best;
+	    addEventListener("keydown", teclaDown);
+	    addEventListener("keyup", teclaUp);
+        setTimeout(main,1000/fps);	
+
+	    var alvo = {
+		lugar : 150,
+		tamanho: 30,
+		altura: 5,
+		desenha: function(){
+			ctx.fillStyle = "red";
+			ctx.fillRect(this.lugar, chao - this.altura ,this.tamanho, this.altura);
+		}
+	    };
+
+    function main(){
+
+        rdmCount++;
+	    if(rdmCount % 100 == 0) vento = 30-Math.floor(60*Math.random());
+	   	
+	   	if(estado == 1)
+	    if (vida > 0){
+		    v = v + a*dt;
+	        i = i + v*dt;	
+	        if(i<chao-30){
+	        	vx = vx + (ax - vento)*dt;
+				ix = ix + vx*dt;
+			}else{
+
+			}
+	    }
+
+        if(i>=chao-30){
+            i = chao - 30;
+		    if(v > 200){
+			    vida --;
+			    estado = 3;//bateu!!
+			    rdmCount = 0;
+			    
+		    }else if((ix > alvo.lugar) && (ix + 20 <alvo.lugar + alvo.tamanho)){
+			    if(estado == 1){
+			        ponto++;
+			        estado = 2;//acertou o alvo!
+			    }else if(estado ==2){
+			        if(fuel <1000) fuel+=20;
+			        else{
+			            estado = 0;
+			            alvo.lugar = Math.floor(300*Math.random());
+			            alvo.tamanho = 25+Math.floor(10*Math.random());
+			        }   
+			    }
+		    }
+		    v = 0;
+	    }
+
+        if(i<0){
+            i = 0;
+		    v = 0;
+	    }
+
+        ctx.clearRect(0,0,600,600);
+ 
+        if(estado == 3){
+        	    if(vida == 0){
+        	        if (best = localStorage.getItem("best")){
+        	            if(best < ponto){
+        	                best = ponto;
+        	                localStorage.setItem("best",best);
+        	            }
+        	        }else{
+        	            best = ponto;
+        	            localStorage.setItem("best",best);
+        	        }
+        	        
+			        ctx.font="20px Georgia";
+	                ctx.strokeText("perdeu",120,200);
+	                ctx.strokeText("pontuacao:" + ponto,100,220);
+	                ctx.strokeText("best:" + best,120,240);
+			    }else{
+			        ctx.font="20px Georgia";
+	                ctx.strokeText("Bateu!\n(enter)",150,200);
+	            }
+        }
+        
+        if(estado == 0){
+		    ctx.font="20px Georgia";
+	        ctx.strokeText("press enter",120,200);
+        }
+        
+        if(estado == 2){
+			    ctx.font="20px Georgia";
+	            ctx.strokeText("abastecendo...",100,200);
+        }
+	    ctx.font="20px Georgia";
+	    ctx.strokeText("Vento: " + vento,250,30);
+
+	    ctx.font="20px Georgia";
+	    ctx.strokeText("Combustivel: ",10,30);
+
+	    ctx.font="20px Georgia";
+	    ctx.strokeText("Vida: "+ vida,10,50);
+
+	    ctx.font="20px Georgia";
+	    ctx.strokeText("Pontos: "+ ponto,250,50);
+	    
+	    if(fuel<100)ctx.fillStyle = "red";
+	    else if(fuel<=500)ctx.fillStyle = "yellow";
+	    else ctx.fillStyle = "blue";
+	    ctx.fillRect(130 , 20, fuel/10, 10);
+	    
+        ctx.fillStyle = "rgb(70,70,190)";
+	    
+        ctx.beginPath();
+	        ctx.moveTo(500,chao);
+            ctx.lineTo(0,chao);  
+        ctx.closePath();
+          
+        ctx.stroke();
+        
+        ctx.beginPath();
+            ctx.moveTo(500,0);
+            ctx.lineTo(0,0);
+        ctx.closePath();
+        ctx.stroke();
+
+	    alvo.desenha();
+	    ctx.stroke();
+        
+        ctx.beginPath();
+            ctx.moveTo(ix,30+i);
+            ctx.lineTo(20+ix,30+i);
+            ctx.lineTo(10+ix,i);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+	   setTimeout(main,1000/fps);	
+
+    }
+
+    function teclaUp(e){
+        if(e.keyCode == 38){// pulo
+            a = 100;
+		}
+	}
+
+    function teclaDown(e){
+        if(e.keyCode == 37){// esquerda
+            if(fuel > 0){
+                fuel -=10;
+                vx = -50;
+			}
+        }
+		if(e.keyCode == 39){// direita
+			if(fuel > 0){			
+			fuel -=10;
+			vx = +50;
+			}
+		}
+		if(e.keyCode == 38){// pulo
+			if(fuel > 0){
+			fuel -=30;
+			v -= 50; 
+			if (v > -100 ) 
+				a -= 30;
+			}
+		}
+		if(e.keyCode == 13){
+			if(estado != 0){
+			    if((estado == 3) && (vida == 0)){
+			        vida = 3;
+			        ponto = 0;
+			        fuel = 1000;
+			    }
+			    estado = 0;
+			}else{
+			    estado = 1;
+			    i = 50;
+			    ix = 150;
+			    v = 0;
+			    vx= 0;
+			} 
+		}
+    }
+        </script>
+    </body>
+</html>
