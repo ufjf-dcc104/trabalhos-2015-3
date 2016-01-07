@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Space Shooter</title>
+		<script src="Sprite.js"></script>
+	</head>
+	<body>
+		<h1>Space Shooter</h1>
+		<canvas width="400" height="300">
+			Seu navegador não tem suporte ao canvas!
+		</canvas>
+		</br>
+		<a href="../Trabalho 1 - Space Shooter/Space Shooter.html">SpaceShooter<a> </br>
+		<a href="../Trabalho 1 - Duelo/Duelo.html">Duelo<a> </br>
+		<a href="../Trabalho 1 - Moon Lander/Moon Lander.html">Moonlander<a> </br>
+		<script>
+		
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			var fps = 60;
+			var g = 60;
+			var dt = 1/fps;
+			var contador = 0;
+			
+			<!--Definição do player--!>
+			var player = new Sprite();
+			player.tiro = false;
+			player.intervaloTiro = 0;
+			player.x = 200;
+			player.y = 260;
+			player.energia = 200;
+			player.vidas = 3;
+			player.pontos = 0;
+			
+			var tiros = [];
+			var inimigos = [];
+			var tirosInimigos = [];
+
+			addEventListener("keydown", function(e){
+				console.log("Tecla: " + e.keyCode);
+				if(e.keyCode==37){
+					player.vx = -50;
+				}
+				if(e.keyCode==39){
+					player.vx = 50;
+				}
+				if(e.keyCode==32){
+					player.tiro = true;
+				}
+			});
+			addEventListener("keyup", function(e){
+				if(e.keyCode == 37){
+					player.vx = 0;
+				}
+				if(e.keyCode == 39){
+					player.vx = 0;
+				}
+				if(e.keyCode == 32){
+					player.tiro = false;
+				}
+			});
+			
+			setInterval(passo, 1000/fps);
+			
+			function passo(){
+				ctx.fillStyle = "white";
+				ctx.fillRect(0,0, tela.width, tela.height);	
+				
+				player.mover(dt,0);
+				//Controle de tiro do player
+				if(player.tiro && player.intervaloTiro<=0){
+					var tiro = new Sprite();
+					tiro.w = 5;
+					tiro.h = 5;
+					tiro.vy = -180;
+					tiro.angulo = player.angulo;
+					tiro.x = player.x;
+					tiro.y = player.y;
+					tiros.push(tiro);
+					player.intervaloTiro = 1/1; // 1 tiro(s) por segundo
+				}
+				player.intervaloTiro -= 1*dt;
+				tiros.forEach(function(t){
+					t.mover(dt,0);	
+					t.desenhar(ctx);
+					if(t.y<0 || t.y > tela.height || t.x<0 || t.x> tela.width){
+						tiros.splice(tiros.indexOf(t), 1);
+					}
+				});
+				
+				contador++;
+				if((inimigos.length <= 8) && contador == (120)){
+					<!--Definição do inimigo--!>
+					var enemy = new Sprite();
+					enemy.x = Math.floor(Math.random() * ((tela.width-20) - 10 + 1)) + 10;
+					enemy.y = -20;
+					enemy.vy = 50;
+					enemy.angulo = Math.PI;
+					enemy.contTiro = 0;
+					enemy.tiro = false;
+					inimigos.push(enemy);
+					contador = 0;
+				}
+				inimigos.forEach(function(i){
+					i.mover(dt,0);	
+					i.desenhar(ctx);
+					if(i.y < -100 || i.y > tela.height + 50 || i.x < 0 || i.x > tela.width){
+						inimigos.splice(inimigos.indexOf(i), 1);
+					}
+					if(i.colidiuCom(player)){
+						player.energia -= 50;
+						inimigos.splice(inimigos.indexOf(i), 1);
+					}
+					for(b = 0; b < tiros.length; b++){
+						if(i.colidiuCom(tiros[b])){
+							player.pontos += 100;
+							inimigos.splice(inimigos.indexOf(i), 1);
+							tiros.splice(tiros[b], 1);
+							break;
+						}
+					}
+					//Controle de tiro dos inimigos
+					i.contTiro++;
+					if(i.contTiro == 120){
+						i.contTiro = 0;
+						i.tiro = true;
+					}
+					if(i.tiro){
+					i.tiro = false;
+					var tiro = new Sprite();
+					tiro.w = 5;
+					tiro.h = 5;
+					tiro.vy = 180;
+					tiro.angulo = i.angulo;
+					tiro.x = i.x;
+					tiro.y = i.y;
+					tirosInimigos.push(tiro);
+					}
+				});
+				tirosInimigos.forEach(function(t){
+					t.mover(dt,0);	
+					t.desenhar(ctx);
+					if(t.y<-80 || t.y > tela.height*2 || t.x<0 || t.x> tela.width){
+						tirosInimigos.splice(tiros.indexOf(t), 1);
+					}
+					if(t.colidiuCom(player)){
+						tirosInimigos.splice(tiros.indexOf(t), 1);
+						player.energia -= 50;
+					}
+				});
+				<!--Controle da energia e vidas--!>
+				if(player.energia <= 0){
+					tiros.forEach(function(t){
+						tiros.splice(tiros.indexOf(t), 1);
+					});
+					inimigos.forEach(function(i){
+						inimigos.splice(inimigos.indexOf(i), 1);
+					});
+					player.energia = 200;
+					player.x = 200;
+					player.y = 260;
+					player.vidas--;
+					if(player.vidas < 0){
+						player.vidas = 3;
+						player.pontos = 0;
+					}
+				}
+				
+				player.desenhar(ctx);
+				
+				ctx.beginPath();//borda
+				ctx.moveTo(0,0);
+				ctx.lineTo(400,0);
+				ctx.lineTo(400,300);
+				ctx.lineTo(0,300);
+				ctx.closePath();
+				ctx.stroke();
+				
+				ctx.beginPath();//borda do nível de combustível
+				ctx.moveTo(290, 35);
+				ctx.lineTo(290+100	, 35);
+				ctx.lineTo(290+100, 15);
+				ctx.lineTo(290, 15);
+				ctx.closePath();
+				ctx.stroke();
+								
+				ctx.fillStyle = "green";
+				ctx.beginPath();//barra vida
+				ctx.moveTo(290, 35);
+				ctx.lineTo(290+player.energia*0.5, 35);
+				ctx.lineTo(290+player.energia*0.5, 15);
+				ctx.lineTo(290,15);
+				ctx.closePath();
+				ctx.fill();
+				
+				ctx.fillStyle = "black"; <!--cor da margem --!>
+				ctx.font = "15px verdana";
+				ctx.beginPath();//vidas
+				ctx.fillText("Vidas: " + player.vidas, 290, 55);
+				ctx.closePath();
+				
+				ctx.font = "15px verdana";
+				ctx.beginPath();//pontos
+				ctx.fillText("Pontos: " + player.pontos, 290, 75);
+				ctx.closePath();
+			}
+		</script>
+	</body>
+</html>
