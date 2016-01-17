@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Flappy</title>
+
+	</head>
+	<body>
+		<h1>Flappy</h1>
+<div id="canvascontainer"><canvas width="320" height="180"></canvas></div>
+
+<script>
+
+var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+	var controle = 0;
+
+
+var myGameArea;
+var myGamePiece;
+var myObstacles = [];
+		function Sprite(){
+				this.x = 130;
+				this.y = 130;
+				this.vx = 0;
+				this.vy = 0;
+				this.ax = 0;
+				this.ay = 0;
+				this.w = 30;
+				this.h = 40;
+				this.velocidade = 0;
+				this.angulo = 0;
+				this.va = 0;
+				
+
+				this.mover = function(dt, g){
+					this.angulo = this.angulo + this.va*dt ;
+					this.vx = this.vx + this.ax*dt;
+					this.vy =  this.vy + this.ay*dt-g*dt;
+
+					//vy = vy + ay*dt+g*dt;
+					//this.ax -= 0.5*(this.vx);
+
+					//this.vx = this.vx + this.ax*dt;
+					this.x = this.x + this.vx*dt;
+					
+					//this.ay -= 0.5*(this.vy);
+					//this.vy = this.vy + this.ay*dt+g*dt;
+					this.y = this.y + this.vy*dt;
+					
+				};
+				this.desenhar = function(ctx, pto){
+					if(this.y > 290){
+						this.y = 290;
+						this.vy = 0;
+						this.ay=0;
+					}
+					if(this.y < 10){
+						this.y = 10;
+						this.vy = 0;
+						this.ay=60;
+					}
+					if(this.angulo > 0.5){
+						this.va = 0;
+					}
+					if(this.angulo < -0.5){
+						this.va = 0;
+					}
+					ctx.save();
+					
+					ctx.strokeStyle = "black";
+					ctx.fillStyle = "rgb(250, 150, 150)";
+
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+					ctx.beginPath();
+					ctx.moveTo(-this.w/2, this.h/2);
+					ctx.lineTo(this.w/2, this.h/2);
+					ctx.lineTo(0, -this.h/2);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+					ctx.restore();
+					//ctx.drawImage(img,this.x,this.y,32,32);
+					ctx.font = "20px Georgia";
+					ctx.fillText("Pontos: " + pto , 10, 50);
+					
+					
+					
+					
+				};
+				this.controlar = function(){
+
+				};
+				this.colidiuCom = function(otherobj){
+					
+					var myleft = this.x;
+					var myright = this.x + (this.h/2);
+					var mytop = this.y - 6;
+					var mybottom = this.y +(this.w/2) ;
+					var otherleft = otherobj.x;
+					var otherright = otherobj.x + (otherobj.width);
+					var othertop = otherobj.y;
+					var otherbottom = otherobj.y + (otherobj.height);
+					var crash = true;
+					if ((mybottom < othertop) || (mytop > otherbottom) || (myright < otherleft) || (myleft > otherright)) {
+						crash = false;
+					}else if((myright >= otherleft) && (myleft <= otherleft)){
+						if(mybottom - (this.w/2)*Math.cos(this.angulo)- 6 < othertop) crash = false;
+					}
+					
+					return crash;
+				};
+			}
+
+function startGame() {
+    myGameArea = new gamearea();
+    myGamePiece = new Sprite();
+    myGameArea.start();
+}
+
+function gamearea() {
+    this.canvas = document.createElement("canvas");
+    this.canvas.width = 400;
+    this.canvas.height = 300;    
+    document.getElementById("canvascontainer").appendChild(this.canvas);
+    this.context = this.canvas.getContext("2d");
+    this.pause = false;
+    this.frameNo = 0;
+	this.pto = 0;
+    this.start = function() {
+        this.interval = setInterval(updateGameArea, 1000/fps);
+    }
+    this.stop = function() {
+        clearInterval(this.interval);
+        this.pause = true;
+    }
+    this.clear = function(){
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		
+		
+    }
+}
+
+function component(width, height, color, x, y, gap) {
+    this.width = width;
+    this.height = height;
+    this.speedX = 0;
+    this.speedY = 0;    
+    this.x = x;
+    this.y = y;    
+	this.gap = gap;
+    this.update = function() {
+        ctx = myGameArea.context;
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+    this.crashWith = function(otherobj) {
+        
+    }
+}
+
+function updateGameArea() {
+    var x, y, min, max, height, gap;
+	myGamePiece.mover(dt,-g);
+    for (i = 0; i < myObstacles.length; i += 1) {
+        if (myGamePiece.colidiuCom(myObstacles[i])||myGamePiece.y>288) {
+            myGameArea.stop();
+        } 
+    }
+    if (myGameArea.pause == false) {
+        myGameArea.clear();
+        myGameArea.frameNo += 1;
+        if (myGameArea.frameNo == 1 || everyinterval(140)) {
+            x = myGameArea.canvas.width;
+            y = myGameArea.canvas.height - 100;
+            min = 50;
+            max = 200;
+            height = Math.floor(Math.random()*(max-min+1)+min);
+            min = 50;
+            max = 100;
+            gap = Math.floor(Math.random()*(max-min+1)+min);
+            myObstacles.push(new component(10, height, "green", x, 0));
+            myObstacles.push(new component(10, x - height - gap, "green", x, height + gap, gap));
+        }
+        for (i = 0; i < myObstacles.length; i += 1) {
+            myObstacles[i].x += -1;
+            myObstacles[i].update();
+        }
+		myGameArea.pto = myGameArea.pto +1;
+           
+        myGamePiece.desenhar(myGameArea.context, myGameArea.pto);
+    }
+}
+
+function everyinterval(n) {
+    if ((myGameArea.frameNo / n) % 1 == 0) {return true;}
+    return false;
+}
+
+
+startGame();
+
+
+
+
+
+addEventListener("keydown", function(e){
+	console.log("Tecla: "+e.keyCode);
+		
+		
+		if(e.keyCode==32 || e.keyCode==38){
+			if(controle ==0){
+				myGamePiece.vy = -70;
+				myGamePiece.va = -Math.cos(myGamePiece.angulo);
+				myGamePiece.angulo = -0.3; 
+				 myGamePiece.vy = -70;
+			}
+			else {
+				myGamePiece.ay = g;
+				myGamePiece.va = 0.5;
+				controle=0;
+			}
+			controle++;
+			console.log("C: "+controle);
+			
+		}
+	});
+	addEventListener("keyup", function(e){
+	console.log("Tecla: "+e.keyCode);
+		if(e.keyCode==37){
+			myGamePiece.va = 0;
+		}
+		if(e.keyCode==39){
+			myGamePiece.va = 0;
+		}
+		
+		if(e.keyCode==32 || e.keyCode==38){
+			myGamePiece.ay = g;
+			//myGamePiece.vx = -myGamePiece.va;
+			myGamePiece.va = 0.5;
+			controle=0;
+			
+		}
+	});
+	
+	
+	function disparadorDeAtrito(){
+				setInterval(atritoDoAr, 1500);
+				console.log("ATRITO");
+				
+			}
+			function atritoDoAr(){
+				if(myGamePiece.vy < 0){
+					myGamePiece.ay=g*controle;
+					//disparadorDeAtrito();
+				}else if(myGamePiece.vy > 0){
+					myGamePiece.vy=0;
+					controle=0;
+				}
+			
+			}
+</script>
