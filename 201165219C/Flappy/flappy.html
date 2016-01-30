@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Flappy</title>
+		<script src="imagens.js"></script>
+		<script src="desenho.js"></script>
+		<script src="obstacle.js"></script>
+	</head>
+	<body>
+		<h1>Flappy</h1>
+		<canvas width="600" height="600">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+		<script>
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			var width = tela.width;
+			var height = tela.height;
+			var fps = 70;
+			var g = 200;
+			var x, y;
+			var loser;
+			var vy = 0, ay = 0;
+			var vx = 0, ax = 0;
+			var dt = 1/fps;
+			var cooldown = 0;
+			var point = 0;
+			var imagens = new BancoDeImagens();
+			var obstacles = [];
+			x = width/5;
+			y = height/3;
+			imagens.add("bird","./img/bird2.png");
+			imagens.add("morreu","./img/eMorreu.jpg");
+			addEventListener("keypress", teclaPressionada);
+			setInterval(desenhar, 1000/fps);
+			// Desenhar o cenário a cada intervalo de tempo
+			function desenhar(){
+				// Limpa a tela
+				ctx.clearRect(0,0,width,height);								
+				ctx.fillStyle = "rgb(255,255,255)";
+				ctx.fillRect(0,0,600,600);
+				// Criar obstaculos ?
+				if (cooldown == 0) {
+					obs = new Obstacle(width,height);
+					obstacles.push(obs);
+				}
+
+				// Move o personagem
+				vy = vy + ay*dt+g*dt;
+				y = y + vy*dt;
+				// Move os obstaculos
+				for (var i = 0; i < obstacles.length; i++) {
+					obstacles[i].mover(dt);
+				}
+
+				// Checar os limites da tela
+				if(y > 550){
+					y = 550;
+					vy = 0;
+				}
+				if (y < 10) {
+					y = 10;
+					vy = 0;
+				}
+				point = checkObstacleLimit(obstacles,width,height,point);
+	
+				// Checar se houve colisão
+				loser = checkColision(obstacles,x,y);
+				if (loser) {
+					console.log("Loser");
+					g = vy = 0;
+					for (var i = 0; i < obstacles.length; i++)
+						obstacles[i].vx = 0;
+					imagens.desenhaXY(ctx,"morreu",200,0);
+					ctx.font = "60px Arial";
+					ctx.fillStyle = "black";
+					ctx.fillText("E morreu !!!",220,400);
+					ctx.fillText("Pontos = "+point,230,450);
+				}
+				else {
+				
+					// Desenha o personagem
+					imagens.desenhaXY(ctx,"bird",x,y);
+					// Desenha os obstaculos	
+					for (var i = 0; i < obstacles.length; i++) {
+						obstacles[i].desenha(ctx);
+					}
+
+					cooldown+=dt;
+					// Liberado para proximo obstaculo ?
+					if (cooldown >= 2)
+						cooldown = 0;
+					console.log(point);
+					ctx.font = "20px Arial";
+					ctx.fillStyle = "black";
+					ctx.fillText("Pontos = "+point,10,40);
+				}
+			}
+			// Eventos do teclado
+			function teclaPressionada(e){
+				if(e.keyCode==32)
+					vy = -100;
+			}
+		</script>
+	</body>
+</html> 
