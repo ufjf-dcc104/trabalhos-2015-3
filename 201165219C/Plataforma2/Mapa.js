@@ -61,8 +61,9 @@ function desenharMapa(mapa,f)
 				{
 					f += 8*dt;
 					if (f >= 10) f = 1;
-					ctx.drawImage(mapa.img[3],Math.floor(mapa.f)*50,0,50,50,c*30,l*30,30,30);
+					ctx.drawImage(mapa.img[3],Math.floor(f)*50,0,50,50,c*30,l*30,30,30);
 				}
 			}
-		}	
+		}
+		return (f);	
 	}
