@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Space Shooter</title>
+		<script src="engine.js"></script>
+	</head>
+	<body>
+		<h1>Jogo - Space Shooter</h1>
+		<canvas width="400" height="600">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+		<div>
+		<h3>Instruções</h3>
+		<ul>
+			<li>Controle a nave com as setas do teclado;</li>
+			<li>Dispare os tiros com a barra de espaços;</li>
+			<li>O jogo termina quando sua barra de vida chega a zero.</li>
+		</ul>
+		</div>
+
+		<script>
+
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+
+			var fps=60;//nro de frames
+			var dt=1/fps;//delta T (variação de tempo= 1s/fps)
+			var g=2;//aceleração da gravidade
+			var vento=0;//influencia do vento
+			var pontos=0;
+			var vidas=3;
+			var pause=false;//controlar a parada do jogo
+			var gameOver= false;//indicador de fim de jogo
+			
+			var teclas= {
+				'esq': false,
+				'cima': false,
+				'dir': false,
+				'baixo': false,
+				'tiro': false
+			};
+			
+			var nave= new Sprite();
+			nave.width=40;
+			nave.height=60;
+			nave.x= tela.width/2-nave.width/2;
+			nave.y= (tela.height-nave.height/2)-3;
+			nave.energia=100;
+			
+			nave.controlar= function(tela){
+			
+				ctx.save();
+				
+				
+				ctx.translate(this.x,this.y);//desloca a origem do contexo
+											//(no centro de gravidade do sprite)
+				
+				//verifica se os limites do canvas foram atingidos pelo objeto
+				var limiteEsq= (this.x-this.width/2<=0-this.width);
+				var limiteDir= (this.x+this.width/2>=tela.width+this.width);
+				var limiteCima= ((this.y-this.height/2)<=0);
+				var limiteBaixo= (this.y+this.height/2>=tela.height);
+				
+				if(limiteEsq){
+					this.x= tela.width-this.width/2;//"passar" pro outro lado
+					//this.x= this.width/2;//travar a saida da tela
+					//this.ax=0; this.vx=0;
+				}
+				if(limiteDir){
+					this.x= 0-this.width/2;//"passar" pro outro lado
+					//this.x=tela.width-this.width/2;//travar a saída da tela
+					//this.ax=0; this.vx=0;
+				}
+				if(limiteCima){
+					this.y=(this.height/2);
+					this.vy=0;
+					//this.ax=0; this.vx=0; g=0; this.vy=0;
+				}
+				if(limiteBaixo){
+					this.y=tela.height-this.height/2;
+					this.vy=0;
+				}
+				
+				ctx.restore();
+			};//fim controlar
+			
+			nave.teclado= function(teclas){
+				if(pause) return;//o pause controla a ativação do teclado
+				if(teclas['nada']){
+					this.vx=0; this.vy=0;
+				}
+				if(teclas['esq']){
+					this.vx= -100;
+					//this.ax=-20;
+				}
+				if(teclas['cima']){
+					this.vy= -100;
+					//this.ay=-20;
+				}
+				if(teclas['dir']){
+					this.vx= 100;
+					//this.ax=20;
+				}
+				if(teclas['baixo']){
+					this.vy= 100;
+					//this.ay=20;
+				}
+			};
+			
+			var tiros= [];
+			
+			var inimigos= [];
+			var maxInimigos=5;
+			
+			function criarInimigo(){
+				if(inimigos.length==maxInimigos) return;
+				var en= new Sprite();
+				en.x= Math.floor((Math.random() * (tela.width-nave.width/2))+nave.width/2);
+				en.width= nave.width;
+				en.height= nave.height;
+				en.y= -en.height/2;
+				var sentido= (Math.random() *1)<0.5?-1:1;
+				en.vx=Math.floor((Math.random() *20)+40)*sentido;
+				en.angulo= Math.PI;
+				en.fillStyle="yellow";
+				en.strokeStyle="grey";
+				en.ativo=true;//propriedade exclusiva dos inimigos: indica se está ativo ou não
+				en.desenhar= function(ctx){
+					imagens.desenhaXY(ctx,"enemy",en.x-en.width/2,en.y-en.height/2);
+				};//fim en.desenha
+				en.colidiuCom= function(nave){
+					var atingiuY= this.y+this.height/2>= nave.y-nave.height/2;
+					var atingiuX=	(this.x+this.width/2>= nave.x-nave.width/2)
+									&&(this.x-this.width/2<=nave.x+nave.width/2);
+					if(atingiuX&&atingiuY){
+						this.fillStyle="white";
+						ctx.fillStyle= "red";
+						ctx.fillRect(0,0,tela.width,tela.height);
+						this.ativo=false;
+						nave.energia-=5;
+					}
+				};//fim colidiu com
+				en.controlar= function(){
+					ctx.save();
+					
+					ctx.translate(this.x,this.y);//desloca a origem do contexo
+												//(no centro de gravidade do sprite)
+					
+					//verifica se os limites do canvas foram atingidos pelo objeto
+					var limiteEsq= (this.x-this.width/2<=0);
+					var limiteDir= (this.x+this.width/2>=tela.width);
+					
+					if(limiteEsq){
+						//this.x= tela.width-this.width/2;//"passar" pro outro lado
+						this.x= this.width/2+5;//travar a saida da tela
+						this.vx=(-1)*this.vx;
+					}
+					if(limiteDir){
+						//this.x= 0-this.width/2;//"passar" pro outro lado
+						this.x=tela.width-this.width/2-5;//travar a saída da tela
+						//this.ax=0; this.vx=0;
+						this.vx=(-1)*this.vx;
+					}
+					ctx.restore();
+				};//fim controlar
+			
+				inimigos.push(en);
+			};
+			
+			window.setInterval(passo, 1000/fps);
+			
+			window.addEventListener("keydown", function(e){
+				var key = e.keyCode;
+				//console.log(key);
+				teclas['nada']= false;
+				switch(key){
+					case 37: teclas['esq']=true;
+					break;
+					case 38: teclas['cima']=true;
+					break;
+					case 39: teclas['dir']=true;
+					break;
+					case 40: teclas['baixo']=true;
+					break;
+					case 32: if(tiros.length==5) return;
+							var t= new Disparo();
+							t.width=6;
+							t.height=8;
+							t.x= nave.x;
+							t.y= nave.y-nave.height/2;
+							t.colidiuCom= function(e){
+								var atingiuY= this.y-this.height/2<= e.y+e.height/2;
+								var atingiuX=	(this.x+this.width/2>= e.x-e.width/2)
+												&&(this.x-this.width/2<=e.x+e.width/2);
+								if(atingiuX&&atingiuY){
+									pontos++;
+									e.fillStyle="white";
+									e.ativo=false;
+									tiros.splice(tiros.indexOf(t),1);
+								}
+							};
+							tiros.push(t);
+					break;
+				}
+				
+				nave.teclado(teclas);
+				
+			});//fim keydown
+			
+			window.addEventListener("keyup", function(e){
+				var key = e.keyCode;
+				//console.log(key);
+				teclas['nada']=true;
+				switch(key){
+					case 37: teclas['esq']=false;
+					break;
+					case 38: teclas['cima']=false;
+					break;
+					case 39: teclas['dir']=false;
+					break;
+					case 40: teclas['baixo']=false;
+					break;
+					case 32: teclas['tiro']=false;
+					break
+				}
+				
+				nave.teclado(teclas);
+				
+			});//fim keyup
+	
+			
+			var barraEnergia= new BarraEnergia();
+			barraEnergia.maxWidth= nave.energia;
+			var infoLabel= new InfoLabel(tela);
+			
+			
+			var imagens= new BancoDeImagens();
+			imagens.add("player","sprite01.png");
+			imagens.add("enemy","sprite02.png");
+			nave.desenhar= function(ctx){
+				imagens.desenhaXY(ctx,"player",nave.x-nave.width/2,nave.y-nave.height/2);
+			};//fim nave.desenha
+
+			
+			
+			var contador= 1;//contador de passos
+			var enSpeed= 150;//vel. dos inimigos
+			function passo(){
+			
+				gameOver = (nave.energia==0);
+				
+				if(gameOver){
+					return;
+				}
+				
+				ctx.fillStyle= "#20305F";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				//console.log(teclas);
+				
+				nave.mover(dt);
+				nave.controlar(tela);
+				tiros.forEach(function(t){
+					t.vy=-130;
+					t.ay-=100;
+					t.mover(dt);
+					inimigos.forEach(function(en){
+						t.colidiuCom(en);
+					});
+					t.desenhar(ctx);
+					if(t.y<0) tiros.splice(tiros.indexOf(t),1);
+				});//fim forEach
+				
+				if(contador%50==0) criarInimigo();
+				
+				inimigos.forEach(function(en){
+					en.vy=Math.floor((Math.random() *50)+enSpeed);
+					if(en.ativo){
+						en.mover(dt);
+						en.controlar();
+						en.colidiuCom(nave);
+						en.desenhar(ctx);
+					}else en.y=tela.height+en.height;
+					if(en.y>tela.height+en.height/2) inimigos.splice(inimigos.indexOf(en),1);
+				});//fim forEach
+				barraEnergia.desenhar(ctx,100,nave.energia);
+				nave.desenhar(ctx);
+				infoLabel.desenhar(ctx, vidas, pontos, gameOver);
+				
+				contador++;
+				
+			}//fim passo
+
+		</script>
+	</body>
+</html>
