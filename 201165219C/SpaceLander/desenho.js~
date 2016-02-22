@@ -1,0 +1,81 @@
+function drawSpace (ctx) {
+	ctx.fillStyle = "black";
+	ctx.rect(0,0,800,400);
+	ctx.fill();
+};
+
+function drawFloor (ctx) {
+	ctx.fillStyle = "darkgray";
+	ctx.beginPath();
+	ctx.moveTo(0,380);
+	ctx.lineTo(800,380);
+	ctx.lineTo(800,400);
+	ctx.lineTo(0,400);
+	ctx.closePath();
+	ctx.fill();
+};
+
+function drawFuel (ctx, fuel) {
+	ctx.fillStyle = "green";
+	ctx.fillRect(550,0,10,fuel);
+	ctx.rotate(Math.PI/2);
+	ctx.font = "20px Arial";
+	ctx.fillStyle = "white";
+	ctx.fillText("Combustivel",100,200);
+	ctx.rotate(-Math.PI/2);
+};
+
+function drawBase (ctx,xPouso,yPouso,sizePouso) {
+	ctx.fillStyle = "yellow";
+	ctx.beginPath();
+	ctx.moveTo(xPouso,yPouso);
+	ctx.lineTo(xPouso+sizePouso,yPouso);
+	ctx.lineTo(xPouso+sizePouso,yPouso+sizePouso);
+	ctx.lineTo(xPouso,yPouso+sizePouso);
+	ctx.lineTo(xPouso,yPouso);
+	ctx.closePath();
+	ctx.fill();
+	ctx.stroke();
+};
+
+function checkLimits (x,y,w,h) {
+	if (x < 0)
+		x = 0;
+	if (x > width-400)
+		x = width-400;
+	if (y < 0)
+		y = 0;
+	return (x,y)
+};
+
+function drawResult (ctx,winner,width,heigth) {
+	if (winner == 1) {
+		//ctx.clearRect(0,0,800,600);
+		ctx.font = "60px Arial";
+		ctx.fillStyle = "yellow";
+		ctx.fillText("VITORIA !!!",200,200);
+		ctx.strokeStyle = "darkyellow";
+		ctx.lineWidth = 2;
+		ctx.strokeText("VITORIA !!!",200,200);
+	}
+	else if (winner == 0) {
+		ctx.clearRect(0,0,800,600);
+		ctx.font = "60px Arial";
+		ctx.fillStyle = "red";
+		ctx.fillText("DERROTA !!!",200,200);
+		ctx.fillText("Combustivel !",180,300);
+		ctx.strokeStyle = "darkred";
+		ctx.lineWidth = 2;
+		ctx.strokeText("DERROTA !!!",200,200);
+	}
+	else if (winner == 2) {
+		ctx.clearRect(0,0,800,600);
+		ctx.font = "60px Arial";
+		ctx.fillStyle = "red";
+		ctx.fillText("DERROTA !!!",200,200);
+		ctx.fillText("Pousou rapido !",150,300);
+		ctx.strokeStyle = "darkred";
+		ctx.lineWidth = 2;
+		ctx.strokeText("DERROTA !!!",200,200);
+	}
+};

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Moon Lander</title>
+		<script src="engine.js"></script>
+	</head>
+	<body>
+		<h1>Jogo - Moon Lander</h1>
+		<canvas width="400" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+		<div>
+		<h3>Instruções</h3>
+		<ul>
+			<li>Controle a nave com as setas do teclado;</li>
+			<li>Quanto mais tempo manter uma tecla pressionada, mais a nave acelera nessa direção;</li>
+			<li>O vento influencia na direção horizontal que a nave toma;</li>
+			<li>O objetivo é atingir a "ilha";</li>
+			<li>Você perde pontos e vida se a nave não pousar na "ilha" ou se a energia terminar;</li>
+			<li>Para tentar novamente, aperte barra de espaço (só funciona enquanto tiver vidas).</li>
+		</ul>
+		</div>
+
+		<script>
+
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+
+			var fps=60;//nro de frames
+			var dt=1/fps;//delta T (variação de tempo= 1s/fps)
+			var g=0;//aceleração da gravidade
+			var vento=0;//influencia do vento
+			var pontos=0;
+			var vidas=3;
+			var pause=false;//controlar a parada do jogo
+			var gameOver= false;//indicador de fim de jogo
+			
+			
+			var nave = new Sprite();
+			nave.x=40;
+			nave.y=15;
+			nave.width=15;
+			nave.height=20;
+			nave.vy=3;
+			nave.energia=100;
+			nave.controlar= function(tela){
+			
+				ctx.save();
+				
+				
+				ctx.translate(this.x,this.y);//desloca a origem do contexo
+											//(no centro de gravidade do sprite)
+				
+				//verifica se os limites do canvas foram atingidos pelo objeto
+				var limiteEsq= (this.x-this.width/2<=0-this.width);
+				var limiteDir= (this.x+this.width/2>=tela.width+this.width);
+				var limiteCima= (this.y-this.height/2<=0);
+				var limiteBaixo= (this.y+this.height/2>=tela.height);
+				
+				if(limiteEsq){
+					this.x= tela.width-this.width/2;//"passar" pro outro lado
+					//this.x= this.width/2;//travar a saida da tela
+					//this.ax=0; this.vx=0;
+				}
+				if(limiteDir){
+					this.x= 0-this.width/2;//"passar" pro outro lado
+					//this.x=tela.width-this.width/2;//travar a saída da tela
+					//this.ax=0; this.vx=0;
+				}
+				if(limiteCima){
+					this.y=this.height/2;
+					//this.ax=0; this.vx=0; g=0; this.vy=0;
+				}
+				if(limiteBaixo){
+					vento=0;
+					this.y=tela.height-this.height/2;
+					this.ax=0; this.vx=0; g=0; this.vy=0;
+					if(!pause){
+						pontos= pontos<=0?0:pontos-5;
+						vidas--;
+					}
+					pause= true;//se atingir o "poço", perde vidas, pontos e pausa o jogo
+				}
+				
+				ctx.restore();
+			};//fim controlar
+			
+			nave.teclado= function(teclas){
+				if(pause) return;//o pause controla a ativação do teclado
+				if(teclas['esq']){
+					this.vx+= -3;
+				}
+				if(teclas['cima']){
+					this.vy+= -3;
+				}
+				if(teclas['dir']){
+					this.vx+= 3;
+				}
+				if(teclas['baixo']){
+					this.vy+= 3;
+				}
+			};
+			
+			
+			//Ilha onde a nava tem que parar
+			var land = new Land();
+			land.width= 50;
+			land.height= 10;
+			land.x= 100+land.width/2;//posicionamento inicial
+			land.y= tela.height-land.height/2;
+			//controle de colisão ilha->nave (ficou mais fácil fazer desse modo)
+			land.colidiuCom = function(sprite){
+				var topo = (sprite.y+sprite.height/2>=this.y-this.height/2)&&
+							 (sprite.y+sprite.height/2<=5+this.y-this.height/2);//posição válida para colisão no topo da ilha
+				var esquerda= (sprite.x+sprite.width/2>=this.x-this.width/2);//espaço válido p/ colisão no lado esquerdo da ilha
+				var direita=  (sprite.x-sprite.width/2<=this.x+this.width/2);//espaço válido p/ colisão no lado direito da ilha
+				if(topo && esquerda && direita ){//condição para colisão
+					vento=0;
+					sprite.y= this.y-this.height/2-sprite.height/2;//posiciona corretamente a base da nave no topo da ilha
+					sprite.ax=0; sprite.vy=0; sprite.vx=0;//pára o sprite
+					if(!pause) pontos+=10;//dá pontos ao jogador
+					pause= true;//ativa a pausa do jogo
+				}
+				/*
+				else if(esquerda&&(sprite.y+sprite.height/2>=this.y-this.height/2)){//se colidiu com a lateral esquerda da ilha
+					sprite.vx=0;//pára o sprite
+					sprite.x= (this.x-this.width/2)-sprite.x/2;//posiciona corretamente a lateral da nave
+				}else if(direita&&(sprite.y+sprite.height/2>=this.y-this.height/2)){//se colidiu com a lateral direita da ilha
+					sprite.vx=0;//pára o sprite
+					sprite.x= (this.x+this.width/2)+sprite.x/2;//posiciona corretamente a lateral da nave
+				}
+				*/
+			};
+			
+			
+			var barra= new BarraEnergia();
+			barra.maxWidth=100;
+			
+			
+			var infoLabel= new InfoLabel(tela);//obj que imprime as info na tela
+						
+			
+			
+			
+			
+			window.setInterval(passo, 1000/fps);
+			
+			var teclas= {
+				'esq': false,
+				'cima': false,
+				'dir': false,
+				'baixo': false
+			};
+			var reiniciar= function(){
+				vento = (Math.random().toPrecision(2)*1);//o valor do vento, para cálculo varia entre 0 e 0.99
+				if((Math.random().toPrecision(2)*1)<0.5) vento*=(-1);//randomização da direção do vento
+				nave.x= Math.floor((Math.random() * (tela.width/2-nave.width/2)));//a posição x é randômica até a metade da tela
+				nave.y=30;//posição y inicial fixa(por enquanto)
+				land.sortearPosicao(tela);
+				pause= false;//remove o pause do jogo
+				nave.vy= Math.floor((Math.random()*5)+5);//a nave pode começar com uma velocide de queda de 5 a 10
+				nave.energia= barra.maxWidth;
+			};
+			window.addEventListener("keydown", function(e){
+				var key = e.keyCode;
+				//console.log(key);
+				switch(key){
+					case 37: teclas['esq']=true;
+					break;
+					case 38: teclas['cima']=true;
+					break;
+					case 39: teclas['dir']=true;
+					break;
+					case 40: teclas['baixo']=true;
+					break;
+					case 32:if(!pause) return;
+							reiniciar();
+					break;
+				}
+				
+				nave.teclado(teclas);
+				
+			});//fim keydown
+			
+			window.addEventListener("keyup", function(e){
+				var key = e.keyCode;
+				//console.log(key);
+				switch(key){
+					case 37: teclas['esq']=false;
+					break;
+					case 38: teclas['cima']=false;
+					break;
+					case 39: teclas['dir']=false;
+					break;
+					case 40: teclas['baixo']=false;
+					break;
+				}
+				
+				nave.teclado(teclas);
+				
+			});//fim keyup
+	
+			
+			var imagens= new BancoDeImagens();
+			imagens.add("player","nave.png");
+			nave.desenhar= function(ctx){
+				imagens.desenhaXY(ctx,"player",nave.x-nave.width/2,nave.y-nave.height/2);
+			};//fim nave.desenha
+
+			
+			var contador= 1;
+			function passo(){
+			
+				if(gameOver){
+					return;
+				}
+				
+				ctx.fillStyle= "blue";
+				ctx.fillRect(0,0,tela.width,tela.height);
+				
+				if(contador%60==0 && !pause) nave.energia-=5;
+				if(nave.energia<=0 && !pause){
+					vidas--;
+					pause= true;
+					vento=0;
+					nave.ax=0; nave.vy=0; nave.vx=0;//pára o sprite
+				}
+				
+				gameOver = (vidas==0);
+				
+				nave.mover(dt,g,vento);
+				nave.controlar(tela);
+				land.colidiuCom(nave);
+				nave.desenhar(ctx);
+				barra.desenhar(ctx,barra.maxWidth,nave.energia);
+				land.desenhar(ctx);
+				infoLabel.desenhar(ctx,vidas,pontos,vento,gameOver);
+	
+				contador++;
+			}//fim passo
+
+		</script>
+	</body>
+</html>

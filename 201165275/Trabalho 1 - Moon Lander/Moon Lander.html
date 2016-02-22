@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<title>Moon Lander</title>
+	</head>
+	<body>
+		<h1>Moon Lander</h1>
+		<canvas width="400" height="300">
+			Seu navegador não tem suporte ao canvas!
+		</canvas>
+		</br>
+		<a href="../Trabalho 1 - Space Shooter/Space Shooter.html">SpaceShooter<a> </br>
+		<a href="../Trabalho 1 - Duelo/Duelo.html">Duelo<a> </br>
+		<a href="../Trabalho 1 - Moon Lander/Moon Lander.html">Moonlander<a> </br>
+		<script>
+			console.log("Iniciando Moon Lander...")
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			ctx.fillStyle = "rgb(200,200,200)"; <!--cor do fundo --!>
+			ctx.strokeStyle = "black"; <!--cor da margem --!>
+			ctx.lineWidth = 3;			
+			
+			var y=100, x=0;
+			var vy = 0, vx = 0;
+			var ay = 0, ax = 0;
+			var fps = 60;
+			var g = 60;			
+			var dt = 1/fps;
+			var alvoX = 0;
+			var alvoY = 0;
+			var vidas = 3;
+			var combustivel = 370;
+			var acelera = false;
+			var vento = 5;
+			var pontos = 0;
+			var termina = false;
+			var explodiu = false;
+			var fogo = false;
+
+			addEventListener("keydown", teclaPressionada);
+			addEventListener("keyup", teclaSolta);	
+			
+			function BancoDeImagens(){
+			this.imagens = {};
+				this.add = function(nome, url){
+					this.imagens[nome] = new Image();
+					this.imagens[nome].src = url;
+				};
+				this.desenhaXY = function(ctx, nome, x, y){
+					ctx.drawImage(this.imagens[nome], x, y);
+				};
+				this.desenha = function(ctx, nome, x, y, w, h){
+					ctx.drawImage(this.imagens[nome], x, y, w, h);
+				};
+			}
+			var imagens = new BancoDeImagens();
+			imagens.add("player", "player.png");
+			imagens.add("background", "background.png");
+			imagens.add("fogo", "flame_hrise 2.png");
+			
+			setInterval(desenhaTriangulo, 1000/fps);	
+			function desenhaTriangulo(){
+				vx = vx + ax*dt - vento*dt;
+				x = x + vx*dt;	
+			
+				vy = vy + ay*dt + g*dt;
+				y = y + vy*dt;
+				
+				if( (y > 216) && (y < 218) && (190+x >= 330 ) && (190+x <= 380)){//verificação de pouso na plataforma
+					if(vy > 50 && termina == false){
+						pontos = 0;
+						explodiu = true;
+					}else if(vy <= 50 && termina == false){
+						pontos = 100 + combustivel + Math.round((100-Math.abs((x+200)-365)));//pontuação
+					}
+					vy = 0;
+					y = 216;
+					vx = 0;
+					ax=0;
+					vento = 0;
+					termina = true;				
+							
+				}
+				if(y > 300 || x+190 > 400 || x+190 < -20){//verificação de saída da tela(derrota)
+					x = 0;
+					y = 100;
+					vx = 0;
+					vy = 0;					
+					ay = 0;
+					ax = 0;
+					vento = 0;
+					combustivel = 370
+					vidas--;					
+					if(vidas < 0)vidas = 3;				
+				}
+
+				if(combustivel <= 0){//verificação da quantidade de combustivel
+					ay = 0;
+					combustivel = 0;
+				}
+
+				if(acelera == true && termina == false){//controle do acelerador
+					combustivel--;
+				}	
+				
+			
+				ctx.fillStyle = "rgb(200,200,200)"; <!--cor do fundo --!>
+				ctx.strokeStyle = "black"; <!--cor da margem --!>
+				ctx.lineWidth = 3;
+				
+				imagens.desenha(ctx, "background", 0, 0, 400, 300);//background
+				//ctx.clearRect(0,0, 400,300)
+				
+				imagens.desenha(ctx, "player", 190+x, y, 20, 30);//player
+				
+				if(fogo){
+					imagens.desenha(ctx,"fogo", 191+x, y+27, 18, 10)//fogo
+				}
+				
+				
+				
+				/*
+				ctx.beginPath();//triangulo
+				ctx.moveTo(190+x,30+y);
+				ctx.lineTo(210+x,30+y);
+				ctx.lineTo(200+x,0+y);
+				ctx.closePath();
+				ctx.stroke();				
+				ctx.fill();
+				*/
+				ctx.beginPath();//borda
+				ctx.moveTo(0,0);
+				ctx.lineTo(400,0);
+				ctx.lineTo(400,300);
+				ctx.lineTo(0,300);
+				ctx.closePath();
+				ctx.stroke();
+
+				ctx.beginPath();//plataforma
+				ctx.moveTo(350,250);
+				ctx.lineTo(380,250);
+				ctx.lineTo(380,260);
+				ctx.lineTo(350,260);
+				ctx.closePath();
+				ctx.stroke();
+				ctx.fill();
+
+				ctx.font = "20px verdana";
+				ctx.beginPath();//vidas
+				ctx.fillText("Vidas: " + vidas, 10, 50);
+				ctx.closePath();
+				
+				ctx.beginPath();//combustível
+				ctx.fillText("Combustível: ", 10, 30);
+				ctx.closePath();
+
+
+				if(termina == true){
+					ctx.font = "40px verdana";
+					ctx.beginPath();
+					ctx.fillText("Pontos: " + pontos, 50, 150);
+					ctx.closePath();
+				}
+				
+				if(explodiu == true){//mensagem de explosão
+					ctx.font = "40px verdana";
+					ctx.beginPath();
+					ctx.fillText("A nave explodiu!" , 50, 190);
+					ctx.closePath();
+				}
+				
+				/*
+				ctx.beginPath();//verificação de VY (debugger)
+				ctx.fillText(vy, 10, 200);
+				ctx.closePath();
+				*/
+				
+				ctx.beginPath();//borda do nível de combustível
+				ctx.moveTo(145, 35);
+				ctx.lineTo(145+185, 35);
+				ctx.lineTo(145+185, 15);
+				ctx.lineTo(145, 15);
+				ctx.closePath();
+				ctx.stroke();
+								
+				ctx.fillStyle = "green";
+				ctx.beginPath();//barra vida
+				ctx.moveTo(145, 35);
+				ctx.lineTo(145+combustivel*0.5, 35);
+				ctx.lineTo(145+combustivel*0.5, 15);
+				ctx.lineTo(145,15);
+				ctx.closePath();
+				ctx.fill();
+			}
+
+			function teclaPressionada(e){
+				console.log("Tecla: " + e.keyCode);
+				if(e.keyCode == 39){
+					ax = 10;
+				}else if(e.keyCode == 37){
+						ax = -10;					
+					}
+				if(e.keyCode == 40){
+					ay = -10;
+				}else if(e.keyCode == 38){
+						ay = 10;					
+					}
+				if((e.keyCode == 32) && (combustivel > 0) && (termina == false)){
+					ay = -80;
+					acelera = true;
+					fogo = true;
+				}			
+			}
+			
+			function teclaSolta(e){
+				console.log("Tecla: " + e.keyCode);
+				if(e.keyCode == 39){
+					ax = 0;
+				}else if(e.keyCode == 37){
+						ax = 0;					
+					}
+				if(e.keyCode == 40){
+					ay = 0;
+				}else if(e.keyCode == 38){
+						ay = 0;					
+					}
+				if(e.keyCode == 32){
+					ay = 0;
+					acelera = false;
+					fogo = false;
+				}			
+			}
+		</script>
+	</body>
+</html>

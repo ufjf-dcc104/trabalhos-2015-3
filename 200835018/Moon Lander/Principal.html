@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+     <head>
+          <meta charset="utf-8"/>
+          <title>Exemplo Nave in Moon</title>
+     </head>
+     <body>
+
+          <canvas width="400" height="300">Seu navegador nao tem suporte ao canvas.</canvas>
+          
+          <script>
+                  console.log("Iniciando o Game ...");
+				  
+				  function BancoDeImagens(){
+					  this.imagens = {};
+					  
+					  this.add = function(nome,url){
+						  this.imagens[nome] = new Image();
+						  this.imagens[nome].src = url;
+					  };
+					  
+					  this.desenhaXY = function(ctx,nome,x,y,dw,dh){
+						  ctx.drawImage(this.imagens[nome],x,y,dw,dh);
+					  };
+					  
+					  this.desenhaXY2 = function(ctx,nome,x,y){
+						  ctx.drawImage(this.imagens[nome],x,y);
+					  };
+
+					  this.desenha = function(ctx,nome,x,y,w,h,dx,dy,dw,dh){
+						  ctx.drawImage(this.imagens[nome],x,y,w,h,dx,dy,dw,dh);
+					  };
+				  } 
+
+				  var imagens = new BancoDeImagens();
+				  imagens.add("background","lua.png"); 
+				  imagens.add("foguete","foguete.png");
+				  
+		/*------------------------------------------------------------------------------------------------------------------*/
+				  
+				  function Sprite(){
+		
+					this.x = 130;
+					this.y = 523;
+					this.vx = 0;
+					this.vy = 0;
+					this.w = 30;
+					//altura do sprite.
+					this.h = 40;
+					this.angulo = 0;
+			
+					this.mover = function(dt){
+						this.x = this.x + this.vx*dt;
+						this.y = this.y + this.vy*dt;
+					};
+			
+					this.desenhar = function(ctx){
+						ctx.save();
+
+						ctx.strokeStyle = "black";
+						ctx.fillStyle = "rgb(250, 150, 150)";
+
+						ctx.translate(this.x, this.y);
+						ctx.rotate(this.angulo);
+						
+						ctx.beginPath();
+						
+						ctx.moveTo(-this.w/2, this.h/2);
+						ctx.lineTo(this.w/2, this.h/2);
+						ctx.lineTo(0, -this.h/2);
+						
+						ctx.closePath();
+						ctx.fill();
+						ctx.stroke();
+						
+						ctx.restore();
+					};
+			
+					this.controlar = function(){};
+			
+					this.controlarTiro = function(veloc_tiro){
+						this.vy = -veloc_tiro;
+					}
+			
+		          };
+		
+		/*------------------------------------------------------------------------------------------------------------------*/
+				  
+       
+                  var tela = document.getElementsByTagName("canvas")[0];
+                  var ctx = tela.getContext("2d");
+				  var ctxGO = tela.getContext("2d");
+
+                  var fps = 60;
+                  var dt = 1 / fps;
+
+                  var y = 269;
+                  var vy = 0;                  
+                  var ay = 0;
+
+                  var x = 30;
+                  var vx = 0;                  
+                  var ax = 0;
+				  
+				  //Gravidade.
+		          var g = 15;
+				  
+				  //Ventania (Velocidade e direção).
+				  var vento = new Array(10, -10, 20, -20, 50, -50); //Modo Fácil.
+				  //var vento = new Array(140, -140, 180, -180, 230, -230); //Modo Difícil.
+				  var geraVento = 0;
+				  
+				  //Variáveis da HUD.
+				  var score = 0;
+				  var fullTank = 150;
+				  var gasosa = fullTank;
+				  var life = 2;
+				  
+				  //Variável para travar a nave.
+				  var paneNave = false;
+				  
+				  var background = new Sprite();
+				  
+				  background.desenhar = function(ctx){
+					imagens.desenhaXY(ctx,"background",0,0,tela.width,tela.height);
+				 }
+                  
+				  addEventListener("keydown", teclaPressionada);
+                  addEventListener("keyup", teclaSolta);
+				  
+                  setInterval(desenhaTriangulo, 1000/fps);
+
+                  function desenhaTriangulo(){
+
+				     geraVento = vento[Math.floor(Math.random() * 6)];
+				  
+                     vx = vx + ax * dt + geraVento * dt; 
+                     x = x + vx * dt;
+                   
+                     vy = vy + ay * dt + g * dt; 
+                     y = y + vy * dt;
+					
+                     ctx.clearRect(0,0,400,300);
+					 
+					 //Desenhando o plano de fundo.
+			         background.desenhar(ctx);
+					 
+					 /*Desenhando a informação de Game Over na tela.*/
+					 if(life == 0){
+						ctxGO.fillStyle = "rgb(100,149,237)";
+						ctxGO.font = "30px arial";
+						ctxGO.fillText("Game Over",120,170);
+						ctxGO.fillStyle = "rgb(100,149,237)";
+						ctxGO.font = "15px arial";
+						ctxGO.fillText("(Aperte Space para reiniciar o jogo.)",100,190);
+					 }
+					 
+					 /*Desenhando a HUD:*/
+					 
+					 //Escolhendo a cor do desenho.
+                     ctx.fillStyle = "white";
+				     //Desenhando o retângulo, que representa a HUD.
+                     ctx.fillRect(0,0,400,27);
+                     //Contornando a região retangular.
+                     ctx.strokeStyle = "green";
+                     //Aumentando a linha de contorno
+                     ctx.lineWidth = 2;
+                     ctx.strokeRect(0,0,400,27); 
+					 
+					 /*Desenhando os elementos da HUD:*/
+					 
+					 ctx.fillStyle = "Blue";
+                     ctx.font = "15px verdana";
+					 ctx.fillText("SCORE:",3,18);
+					 
+					 ctx.fillStyle = "Brown";
+                     ctx.font = "15px verdana";
+					 ctx.fillText(score,67,18);
+					 
+					 ctx.fillStyle = "Blue";
+                     ctx.font = "15px verdana";
+					 ctx.fillText("Fuel:",105,18);
+					 
+					 /*Criando a barra de combustível.*/
+					 ctx.fillStyle = "blue";
+					 ctx.strokeStyle = "black";
+					 ctx.lineWidth = 2.2;
+					 ctx.beginPath();				 
+					 ctx.rect(150,5,gasosa,18);
+					 ctx.closePath();
+					 ctx.fill();
+					 ctx.stroke(); 
+					 
+					 ctx.fillStyle = "Blue";
+                     ctx.font = "15px verdana";
+					 ctx.fillText("Life:",335,18);
+					 
+					 ctx.fillStyle = "Brown";
+                     ctx.font = "15px verdana";
+					 ctx.fillText(life,375,18);
+ 
+                     /*Desenhando a base.*/ 
+                     ctx.strokeStyle = "blue";
+                     ctx.fillStyle = "red";
+                     ctx.fillRect(100,287,100,10);
+					 
+					 /*Desenhando na base a área mais importante.*/
+					 ctx.fillStyle = "green";
+					 ctx.fillRect(137,287,22,10);
+				     
+                     ctx.lineWidth = 2;
+                     ctx.strokeRect(100,287,100,10);
+
+					 /*Desenhando a nave:*/
+                     ctx.strokeStyle = "black";
+                     ctx.fillStyle = "rgb(150,100,205)";
+                      
+                     ctx.beginPath();
+
+                     ctx.moveTo(x,30 + y);
+                     ctx.lineTo(20 + x,30 + y);
+                     ctx.lineTo(10 + x,y);
+					 
+					 //Fazendo a nave pousar na base.
+					 if(((x > 99.5) && (x < 179.7)) && (y >= 255)){
+					 
+					    if((vy > 2) && (vy < 50)){
+						  
+						  if(((x > 137) && (x < 140)) && (y >= 255)){
+						    life = life + 1;
+						    score = score + 100;
+						  }else {
+						    score = score + 10;
+						  }
+						
+                        //Nave explodindo.						
+						}else if( vy >= 50){
+						  life = life - 1;
+					      ctx.fillStyle = "red";
+                          ctx.fillRect(0,0,400,300);
+						  
+						  /*Esse if, faz o Game Over. Se a nave explodir na base.*/
+						  if(life == 0){
+						      paneNave = true;
+							  x = -30;
+						  }else{
+							  y = 269;
+							  x = 30;
+							  gasosa = fullTank;
+							  paneNave = false;
+						  }
+						}
+						
+						vx = 0;
+						vy = 0; 
+						ax = 0;
+						ay = 0;
+						y = 255;
+						
+						/*Enchendo o tanque da nave na base.*/
+						//Esse if é só para evitar que o tanque da nave destruída seja enchido.  
+						if(life > 0){
+							for(var encheTanque = 1; encheTanque <= (fullTank - gasosa); encheTanque++){
+							  if(y > 255){
+								break;
+							  }else{
+								gasosa = gasosa + encheTanque;
+							  }
+							}  
+						}
+						
+					 /*Se a nave pousar de quina com a base, ela explode.*/
+					 }else if(((x > 79.4) && (x < 99.4) && (y >= 255)) || ((x > 179.8) && (x < 199.8)) && (y >= 255)){
+					 
+					    life = life - 1;
+					    ctx.fillStyle = "red";
+                        ctx.fillRect(0,0,400,300);
+						  
+						/*Esse if, faz o Game Over. Se a nave explodir no chão.*/
+						if(life == 0){
+						    paneNave = true;
+						    x = -30;
+						}else{
+						    y = 269;
+						    x = 30;
+							gasosa = fullTank;
+							paneNave = false;
+						}
+					 }
+
+                     //Parar a nave no chão.
+                     if(y >= 269){
+
+					    //Nave explodindo.
+                        if(vy >= 50){
+						
+						  life = life - 1;
+					      ctx.fillStyle = "red";
+                          ctx.fillRect(0,0,400,300);
+						  
+						  /*Esse if, faz o Game Over. Se a nave explodir no chão.*/
+						  if(life == 0){
+						      paneNave = true;
+							  x = -30;
+						  }else{
+							  y = 269;
+							  x = 30;
+							  gasosa = fullTank;
+							  paneNave = false;
+						  }
+						}                       
+
+                        vx = 0;
+                        vy = 0; 
+                        ax = 0;
+                        ay = 0;
+                        y = 269;
+                     }
+
+                     //Parar a nave no limite superior da tela.
+                     if(y <= 29){
+                        vx = 0;
+                        vy = 0; 
+                        ax = 0;
+                        ay = 0;
+                        y = 29;
+                     }
+
+                     //Parar a nave no limite a esquerda da tela.
+                     if(x < 4){
+                        vx = 0;
+                     }
+
+                     //Parar a nave no limite a direita da tela.
+                     if(x > 375){
+                        vx = 0;
+                     }
+
+					 /*Nave sem combustível.*/
+                     if(gasosa == 0){
+					    paneNave = true;
+					 } 					 
+
+                     ctx.closePath();
+                     ctx.fill();
+                     ctx.stroke();
+                 }
+
+                 function teclaPressionada(e){
+                     console.log("Tecla: " + e.keyCode);
+                     
+                     if(e.keyCode == 39){
+					 
+					    if(paneNave == false){
+						  ax = 100;
+						  
+						  if(y < 269){
+						    gasosa = gasosa - 1;
+						  }
+						}
+                        
+                     }else if(e.keyCode == 37){
+					 
+					    if(paneNave == false){
+                          ax = -50;
+						  
+						  if(y < 269){
+						    gasosa = gasosa - 1;
+						  }
+						}
+                     }
+
+                     if(e.keyCode == 40){
+                        ay = 120;
+                     }else if(e.keyCode == 38){
+					 
+					    if(paneNave == false){
+                          ay = -120;
+						  
+						  if(y < 269){
+						    gasosa = gasosa - 1;
+						  }
+						}
+                     }
+					 
+					 /*Reiniciando o jogo.*/
+					 if((e.keyCode == 32) && (life == 0)){
+						paneNave = false;
+						y = 269;
+					    x = 30;
+						gasosa = fullTank;
+						score = 0;
+						life = 2;
+					 }
+                 }
+
+                 function teclaSolta(e){
+                     console.log("Tecla: " + e.keyCode);
+                     
+                     if(e.keyCode == 39){
+                        ax = 0;
+                     }else if(e.keyCode == 37){
+                        ax = 0;
+                     }
+
+                     if(e.keyCode == 40){
+                        ay = 0;
+                     }else if(e.keyCode == 38){
+                        ay = 0;
+                     }
+                 } 
+          </script>
+     </body>
+</html>
