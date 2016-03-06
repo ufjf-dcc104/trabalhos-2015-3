@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+	</head>
+	<body>
+		<h1>Racer Champion</h1>
+		<script src="map.js"></script>
+		<script src="car.js"></script>
+		<script src="enemy.js"></script>
+		<canvas width="800" height="600">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	/* *****
+		1) FALTA MUDAR A COLISAO DOS CARROS PARA SEGUIREM A CONSERVACAO DO MOMENTO LINEAR
+		2) ACHAR MAIS UM SPRITE PARA O INIMIGO
+		3) COLOCAR BARRA DE ENERGIA DO CARRO
+		4) TROCAR O AUMENTO DA ACELERACAO, PARA SER O CONTRARIO O PRIMEIRO VAI MAIS LENTO
+		5) DEIXAR QUE OS INIMIGOS MUDEM DE ACELERACAO E DIRECAO LIVREMENTE
+	*/	
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	// Define as atualizacoes da tela
+	var fps = 60;
+	var g = 200;
+	var dt = 1/fps;
+	// Variavel que controla a vitoria no jogo
+	var elimina;
+	// Variavel do carro do jogador
+	var player = new Car();
+	player.img = new Image();
+	player.img.src = "figs/car.png";				// www.clipartbest.com
+	// Vetor de inimigos
+	var enemies = [];
+	var num_enemies = 10;
+	for (var i = 0; i < num_enemies; i++)
+	{
+		var enemy = new Enemy(210+Math.random()*300.0,-i*500.0,i % 4 + 1);
+		enemies.push(enemy);
+	}
+	
+	// Adiciona os eventos de teclado que podem ocorrer	
+	addEventListener("keydown", function(e)
+		{
+			if(e.keyCode==37)
+				player.direita = true;
+			if(e.keyCode==39)
+				player.esquerda = true;
+		});
+	addEventListener("keyup", function(e)
+		{
+			if(e.keyCode==37)
+				player.direita = false;
+			if(e.keyCode==39)
+				player.esquerda = false;
+		});
+	// Define como sera a atualizacao da pagina
+	setInterval(passo, 1000/fps);
+	function passo()
+	{
+		ctx.clearRect(0,0,1000,1000);
+		// Verifica se o jogador esta vivo
+		if (player.vivo)
+		{
+			// Checar se ganhou o jogo
+			if (enemies.length == 0)
+			{
+				drawVictory();
+				console.log("VITORIA");
+			}
+			else
+			{
+				// Desenha o mapa
+				drawBackground(enemies.length,player);
+				player.mover(ctx,dt);
+				for (var i = 0; i < enemies.length; i++)
+				{
+					elimina = enemies[i].mover(player,dt);
+					if (elimina)
+						enemies.splice(i,1);
+				}
+				player.desenhar(ctx);
+				for (var i = 0; i < enemies.length; i++)
+					enemies[i].desenhar(ctx);
+				console.log(enemies.length);
+			}
+		}
+		else
+		{
+			drawLoss();
+		}
+	}	
+	
+</script>
+</html>

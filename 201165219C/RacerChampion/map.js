@@ -1,0 +1,47 @@
+var mapa = [];
+// Cria um repositorio de imagens do mapa
+mapa.img = [];
+mapa.img[0] = new Image();
+mapa.img[1] = new Image();
+mapa.img[2] = new Image();
+mapa.img[3] = new Image();
+mapa.img[0].src = "figs/background1.png";		// Criado pelo GoogleDraw
+mapa.img[1].src = "figs/background2.png";		// Criado pelo GoogleDraw
+mapa.img[2].src = "figs/trophy.png";			// clubpenguin.wikia.com
+mapa.img[3].src = "figs/carcrash.png";			// sightesseyes13.deviantart.com
+
+var f_count = 0;
+
+function drawBackground (num_enemies,player)
+{
+	if (f_count < 10)
+	{
+		ctx.drawImage(mapa.img[0],0,0,tela.width,tela.height);
+	}
+	else
+	{
+		ctx.drawImage(mapa.img[1],0,0,tela.width,tela.height);
+		f_count = 0;
+	}
+	ctx.fillStyle = "red";
+	ctx.fillRect(700,100,100,200-(20*player.batidas));
+	ctx.fillStyle = "red";
+	ctx.font = "15px Arial";
+	ctx.fillText("Posicao = "+(num_enemies+1),700,50);
+	f_count++;
+}
+
+function drawVictory ()
+{
+	ctx.drawImage(mapa.img[2],0,0,tela.width,tela.height);
+}
+
+function drawLoss ()
+{
+	ctx.fillStyle = "red";
+	ctx.font = "50px Arial";
+	ctx.fillText("CRASH!",tela.width/2,50);
+	ctx.strokeStyle = "red";
+	ctx.strokeText("CRASH!",tela.width/2,50);
+	ctx.drawImage(mapa.img[3],0,0,tela.width,tela.height);
+}
