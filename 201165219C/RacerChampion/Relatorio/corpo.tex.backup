@@ -1,0 +1,57 @@
+\setlength{\parindent}{1.3cm}
+\setlength{\parskip}{0.2cm}
+\tableofcontents
+\newpage
+
+\thispagestyle{empty}
+\section{Descrição do Jogo}
+
+O jogo \textit{Racer Champion} é um jogo de corrida escrito em HTML 5 e \textit{Javascript}, cujo objetivo principal é controlar o carro do personagem principal
+até a primeira posição do \textit{grid} da corrida.
+
+Para isso, o jogador necessita desviar dos competidores da competição e também evitar colisões com os limites da pista. 
+
+Caso o jogador colida perde-se uma certa porcentagem de vida, que é representada por uma barra vermelha do lado direito da tela. Se esta barra chegar a zero é 
+considerado fim de jogo, pois seria equivalente a dizer que o carro sofreu muitos danos e não é mais possível conduzí-lo.
+
+\section{Experiência}
+
+O jogo é considerado bem simples e intuitivo até mesmo para um novato em jogos eletrônicos. Os controles são basicamente virar o carro para direita e para a
+esquerda, em que o jogador necessita controlar sua aceleração para que colisões não ocorram.
+
+Jogadores com experiência em jogos semelhantes como \textit{Top Gear}, \textit{Tetris Racing}, \textit{Lamborghini American Challenge} e outros similares irão
+se adaptar mais facilmente ao \textit{game}.
+
+\section{Modelo de Dados}
+
+O modelo de dados implementado é bem simples. O personagem principal e os competidores são representados por classes que possuem atributos ligados ao movimento.
+
+No caso do personagem principal só pode ocorrer o movimento no eixo horizontal, sendo que o jogador pode controlar para que direção deseja ir utilizando as
+setas do teclado direita e esquerda.
+
+Os inimigos por sua vez são representados por um vetor de tamanho 10 que equivalem aos competidores da corrida. O controle do movimento desses objetos é feito
+utilizando a simples ideia de gravidade. Logo os primeiros adversários são mais fáceis de serem desviados pelo jogador e a medida que avança-se no \textit{grid}
+a dificuldade aumenta, pois a velocidade dos inimigos aumentam devido a aceleração constante que é estipulada a eles.
+
+Além disso, as imagens utilizadas no jogo são também armazenadas em vetores, como se fossem uma pequena biblioteca.
+\newpage
+
+\section{Implementação}
+
+No jogo existem alguns detalhes de implementação que devem ser destacados. Primeiramente a animação do personagem principal muda através de uma rotação para o
+lado que o jogador está pressionando a seta direcional do controle, com isso há uma ideia de movimento maior.
+
+Outro ponto interessante é em relação ao fundo jogo. Para gerar a animação foi feita uma troca entre imagens, em que após certos intervalos de tempo troca-se
+a imagem de fundo. Dessa maneira cria-se a ideia de que os carros estão se movimentando.
+
+Por último é importante mencionar como foi implementado o vetor de inimigos. Inicialmente a posição de cada inimigo é aleatória no eixo horizontal da pista e
+adversários que estão mais a frente no \textit{grid} são colocados com um valor negativo no eixo y, sendo que não aparecerão na tela inicialmente, porém suas
+posições são sempre atualizadas.
+
+Além disso, quando um inimigo se colide com o personagem principal ou quando alcança a posição mais baixa da tela elimina-se esse objeto do vetor de inimigos,
+com isso nao será mais necessário atualizar a posição do mesmo. Isto foi feito, pois como o inimigo já foi ultrapassado ele não irá aparecer mais na tela principal
+do jogo e ficar calculando sua nova posição a cada passo é inútil.
+
+Um detalhe em relação as colisões também ocorre nas laterais da pista. Quando maior for a velocidade do personagem no eixo horizontal maior será a reação da 
+lateral da pista em relação ao personagem principal. Com isso, pode-se chegar ao fim de jogo muito rápido caso o jogador não controle sua velocidade, pois
+o mesmo irá ficar ricocheteando nas laterais do circuito e sofrendo danos, caso sua velocidade seja muito alta.
