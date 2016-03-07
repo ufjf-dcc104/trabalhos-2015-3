@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Plataforma</title>
+		<script src="Sprite.js"></script>
+		<script src="Mapa.js"></script>
+		<script src="Bloco.js"></script>
+		<script src="Dados.js"></script>
+		<script src="SoundLib.js"></script>
+	</head>
+	<body>
+		<h1>Plataforma</h1>
+		<canvas width="600" height="480">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	
+	var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+	
+	
+	var jogo= {
+		'pontos': 0,
+		'vidas': 10,
+		'pause': false,
+		'fimdejogo': false
+	};
+	
+	var mapa = new Mapa();
+	mapa.img.src="mapa_blocos03.png";
+	
+	var pc = new Sprite();
+	pc.img.src= "Old hero02.png";
+	pc.f= 1;///frame da imagem (frame 1 default)
+	pc.p= 1;///controla as poses do personagem (nos frames da imagem)
+	pc.reset= function(){
+		this.x=10*this.largura;
+		this.y=32;
+		this.vx=0;
+	};
+	pc.reset();//configurações padrão do personagem
+	
+	var inimigo = new Sprite();
+	inimigo.img.src= "Inimigos.png";
+	inimigo.f= 1;///frame da imagem (frame 1 default)
+	inimigo.p= 1;///controla as poses do personagem (nos frames da imagem)
+	inimigo.reset= function(mapaAtual){
+		switch(mapaAtual){
+			case 1:
+				this.gx=27;
+				this.gy=5;
+				this.vx=25;
+				this.atx=0;
+			break;
+			case 2:
+				this.gx=15;
+				this.gy=7;
+				this.vx=30;
+				this.atx=0;
+			break;
+			case 3:
+				this.gx=49;
+				this.gy=8;
+				this.vx=35;
+				this.atx=0;
+			break;
+			case 4:
+				this.gx=23;
+				this.gy=6;
+				this.vx=45;
+				this.atx=0;
+			break;
+			default:
+				this.gx=13;
+				this.gy=11;
+				this.vx=20;
+				this.atx=0;
+			break;
+		}
+		this.x=this.gx*this.largura;
+		this.y=this.gy*this.altura;
+	};
+	inimigo.reset(0);
+	inimigo.desenhar = function(ctx, jogo){//contexto e informações do jogo (vidas, pontos...)
+		ctx.save();
+		ctx.strokeStyle = "black";
+		ctx.fillStyle = "rgb(250, 150, 150)";
+
+		ctx.translate(this.x, this.y);
+		if(this.vx>=0){///animação: correr para a direita
+			this.p=1;//parte 1 da animação
+		}else{///animação: correr para a esquerda
+			this.p=1;
+			ctx.scale(-1,1);//escala 1:1 com o desenho invertido no eixo x (valor negativo)
+		}
+		
+		this.f+= 4*dt; ///dt corrige a animação na fração de tempo
+					   ///constante 4: 4 frames por segundo (fração de tempo)
+		
+		switch(this.p){
+			case 1: if(this.f>=5) this.f=1;
+			break;
+			case 2: if(this.f>=7) this.f=1;
+			break;
+		}
+		//desenho normal
+		ctx.drawImage(this.img, ///1,1,16,16,/// corte: pos inicial x, y tamanho do corte l, a
+					Math.floor(this.f)*this.largura, this.p*this.altura,
+					this.largura, this.altura,/// corte: pos inicial x, y tamanho do corte l, a
+					//0, 0, 16, 16);///imagem: pos x,y tamanho l,a
+					-this.largura/2, -this.altura/2,
+					this.largura, this.altura);///imagem: pos x,y tamanho l,a
+		
+		ctx.restore();
+		ctx.strokeStyle = "white";
+		ctx.strokeRect(this.gx*this.largura,this.gy*this.altura, this.largura, this.altura);
+	};//fim desenhar
+	
+	
+	
+	var bloco= new BlocoDin();
+	bloco.img.src= mapa.img.src;
+	
+	bloco.resetBloco= function(mapaAtual){
+		switch(mapaAtual){
+			case 0: this.gx=33;
+					this.gy=14;
+					this.vx= 30;
+			break;
+			case 1: this.gx=28;
+					this.gy=9;
+					this.vx= 40;
+			break;
+			case 2: this.gx=20;
+					this.gy=14;
+					this.vx= 40;
+			break;
+			case 3: this.gx=40;
+					this.gy=13;
+					this.vx= 50;
+			break;
+			case 4: this.gx=50;
+					this.gy=7;
+					this.vx= 60;
+			break;
+		}
+		this.x=this.gx*this.largura;
+		this.y=this.gy*this.altura;
+	}
+	bloco.resetBloco(mapa.mapaAtual);///inicia a posição do bloco no mapa atual
+	
+	
+	
+	var soundlib = new SoundLib();
+	soundlib.load("pulo", "s_pulo.mp3");
+	soundlib.load("moeda", "s_moeda.mp3");
+	soundlib.load("morte", "s_morte.mp3");
+	soundlib.load("troca", "s_troca.mp3");
+	
+	
+	
+	
+	pc.controlar = function(grid){
+		if(this.direita){
+			if(!this.sobBloco)this.ax = -90;
+			else this.ax=-950;
+		}else if(this.esquerda){
+			if(!this.sobBloco)this.ax = 90;
+			else this.ax=950;
+		}else{
+			this.ax = 0;
+		}
+		if(this.pulando && this.vy == 0){
+			this.vy = (-4.0)*g;
+			this.pulando = false;
+			soundlib.play("pulo");
+		}
+		
+		
+		//console.log(this.gy, this.gx);
+		//testa se pegou uma moeda
+		if(grid[this.gy][this.gx]==3){
+			grid[this.gy][this.gx]=0;
+			jogo.pontos++;
+			soundlib.play("moeda");
+		}
+		
+		//testa se pegou uma moeda GRANDE
+		if(grid[this.gy][this.gx]==5){
+			grid[this.gy][this.gx]=0;
+			jogo.pontos+=10;
+			soundlib.play("moeda");
+		}
+		
+		/*Mudança de mapa*/
+		if(grid[this.gy][this.gx]==4){
+			soundlib.play("troca");
+			if(mapa.mapaAtual==4){
+				mapa.mapaAtual=0;
+				mapa.resetMapas();
+			}else mapa.mapaAtual++;
+			this.reset();
+			inimigo.reset(mapa.mapaAtual);
+			bloco.resetBloco(mapa.mapaAtual);
+		}
+		
+		//perdeu vida
+		if(this.gy>=mapa.linhas-2){
+			soundlib.play("morte");
+			if(jogo.vidas>0){//tem vidas ainda?
+				jogo.vidas--;
+				pc.reset();//reseta o personagem
+			}else{
+				jogo.fimdejogo=true;
+				jogo.pause=true;
+			}
+		}
+		
+	};
+	
+	inimigo.controlar = function(grid){
+		if(this.vx>=0){
+			if(grid[this.gy+1][this.gx]==0|| grid[this.gy][this.gx+1]!=0)
+				this.vx=-20;
+		}else{
+			if(grid[this.gy+1][this.gx-1]==0|| grid[this.gy][this.gx-1]!=0)
+				this.vx=20;
+		}
+	};
+	pc.colidiuCom= function(bloco){
+		if (this.pulando) return;
+		var distanciaX= (this.x+this.largura/2)-(bloco.x-bloco.largura/2);
+		var colidiuX= (distanciaX>=0 && distanciaX<=this.largura+bloco.largura);
+		var distanciaY= (this.y+this.altura/2)-(bloco.y-bloco.altura/2);
+		var colidiuY= (distanciaY<=bloco.altura/2 && distanciaY>=-bloco.altura && this.vy>=0);
+		//console.log(colidiuX, colidiuY);
+		
+		if(colidiuX && colidiuY){
+			this.sobBloco=true;
+			this.vx= bloco.vx;
+			this.vy=0;
+			this.y=bloco.y-bloco.altura/2-2;
+			this.gy= bloco.gy-1;
+		}else{
+			this.sobBloco=false;
+		}
+	};
+	
+	inimigo.colidiuCom= function(sprite){
+		var distanciaX= (this.x+this.largura/2)-(sprite.x+sprite.largura/2);
+		var colidiuX= (distanciaX>=0 && distanciaX<=this.largura);
+		//var distanciaY= (this.y-this.altura/2)-(sprite.y+sprite.altura/2);
+		//var colidiuY= (distanciaY<=sprite.altura/2 && distanciaY>=-bloco.altura);
+		var colidiuY= (this.gy==sprite.gy);
+		//console.log(colidiuX, colidiuY);
+		
+		if(colidiuX && colidiuY){
+			soundlib.play("morte");
+			if(jogo.vidas>0){//tem vidas ainda?
+				jogo.vidas--;
+				pc.reset();//reseta o personagem
+			}else{
+				jogo.fimdejogo=true;
+				jogo.pause=true;
+			}
+		}
+	};
+	
+	addEventListener("keydown", function(e){
+		if(e.keyCode==37){
+			pc.direita = true;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = true;
+		}
+		if(e.keyCode==38){
+			pc.pulando = true;
+		}
+		if(e.keyCode==13){///pause
+			jogo.pause = !jogo.pause;
+		}
+
+	});
+	addEventListener("keyup", function(e){
+		if(e.keyCode==37){
+			pc.direita = false;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = false;
+		}
+		if(e.keyCode==38){
+			pc.pulando = false;
+		}
+		if(e.keyCode==32){
+			pc.vy = (-4)*g;
+		}
+		
+	});
+
+
+	var info= new Dados();
+	
+	setInterval(passo, 1000/fps);
+	function passo(){
+
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, tela.width, tela.height);
+		
+		ctx.save();
+		ctx.scale(1,1);
+		ctx.translate(10*pc.largura-pc.x,0);
+		
+		mapa.desenharMapa(ctx);
+		if(!jogo.pause){
+			pc.controlar(mapa.mapas[mapa.mapaAtual]);
+			inimigo.controlar(mapa.mapas[mapa.mapaAtual]);
+			bloco.controlar(mapa.mapas[mapa.mapaAtual]);
+			
+			pc.moverNoGrid(mapa.mapas[mapa.mapaAtual],dt,325);
+			inimigo.moverNoGrid(mapa.mapas[mapa.mapaAtual],dt,325);
+			bloco.moverNoGrid(mapa.mapas[mapa.mapaAtual],dt,325);
+			
+			pc.colidiuCom(bloco);
+			inimigo.colidiuCom(pc);
+		}
+
+		pc.desenhar(ctx,jogo);
+		inimigo.desenhar(ctx,jogo);
+		bloco.desenhar(ctx,mapa.mapaAtual);
+		
+		ctx.restore();
+		
+		
+		info.mostrarInfo(jogo,ctx,tela);
+	}
+	
+</script>
+</html>
