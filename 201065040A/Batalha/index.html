@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Batalha</title>
+		<script src="Sprite.js"></script>
+	</head>
+	<body>
+		<h1>Manipulação de Eixos</h1>
+		<canvas width="400" height="400">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+
+	var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+
+	var pc = new Sprite();
+	var pc2 = new Sprite();
+	pc.x = 100;
+	pc.y = 100;
+	pc2.x = 300;
+	pc2.y = 300;
+	pc2.angulo = Math.PI;
+
+	var tiros = [];
+	var tiros2 = [];
+	var obstaculos = [];
+
+	addEventListener("keydown", function(e){
+
+		if(e.keyCode==37){
+			pc.va = -5;
+		}
+		if(e.keyCode==39){
+			pc.va = 5;
+		}
+		if(e.keyCode==38){
+			pc.velocidade = 80;
+		}
+		if(e.keyCode==16){
+			pc.tiro = true;
+		}
+
+		//nave 2
+		if(e.keyCode==65){
+			pc2.va = -5;
+		}
+		if(e.keyCode==68){
+			pc2.va = 5;
+		}
+		if(e.keyCode==87){
+			pc2.velocidade = 80;
+		}
+		if(e.keyCode==32){
+			pc2.tiro = true;
+		}
+	});
+	addEventListener("keyup", function(e){
+		//nave 1
+		if(e.keyCode==37){
+			pc.va = 0;
+		}
+		if(e.keyCode==39){
+			pc.va = 0;
+		}
+		if(e.keyCode==38){
+			pc.velocidade = 0;
+		}
+		if(e.keyCode==16){
+			pc.tiro = false;
+		}
+
+		//nave 2
+		if(e.keyCode==65){
+			pc2.va = 0;
+		}
+		if(e.keyCode==68){
+			pc2.va = 0;
+		}
+		if(e.keyCode==87){
+			pc2.velocidade = 0;
+		}
+		if(e.keyCode==32){
+			pc2.tiro = false;
+		}
+	});
+
+	setInterval(passo, 1000/fps);
+	function passo(){
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, tela.width, tela.height);	
+
+		if(pc.vida > 0) pc.mover(dt,0);	
+		if(pc2.vida > 0) pc2.mover(dt,0);
+	
+		if(pc.tiro && pc.intervaloTiro<=0 && pc.vida > 0){
+
+			var tiro = new SpriteTiro(pc.x,pc.y,pc.angulo);
+			tiros.push(tiro);
+			pc.intervaloTiro = 1/5; // 5 tiros por segundo
+		}
+		pc.intervaloTiro -= 1*dt;
+
+		if(pc2.tiro && pc2.intervaloTiro<=0 && pc2.vida > 0){
+			var tiro = new SpriteTiro(pc2.x,pc2.y,pc2.angulo);
+			tiros2.push(tiro);
+			pc2.intervaloTiro = 1/5; // 5 tiros por segundo
+		}
+		pc2.intervaloTiro -= 1*dt;
+
+		tiros.forEach(function(t){
+			t.mover(dt);	
+			t.desenhar(ctx);
+			if(t.y<0 || t.y > tela.height || t.x<0 || t.x> tela.width){
+				tiros.splice(tiros.indexOf(t), 1);
+			}else{
+				if(pc2.tomouChumbo(t)){
+					console.log("nave 2 atingida");
+					tiros.splice(tiros.indexOf(t), 1);
+				}
+			}
+
+
+		});
+
+		tiros2.forEach(function(t){
+			t.mover(dt);	
+			t.desenhar(ctx);
+			if(t.y<0 || t.y > tela.height || t.x<0 || t.x> tela.width){
+				tiros2.splice(tiros2.indexOf(t), 1);
+			}else{
+				if(pc.tomouChumbo(t)){
+					console.log("nave 1 atingida");
+					tiros2.splice(tiros2.indexOf(t), 1);
+				}
+			}
+		});
+
+		obstaculos.push(new SpriteObstaculo(0,0,10,tela.height));
+		obstaculos.push(new SpriteObstaculo(0,0,tela.width,10));
+		obstaculos.push(new SpriteObstaculo(0,tela.height - 10,tela.width,10));
+		obstaculos.push(new SpriteObstaculo(tela.width - 10,0,10,tela.height));
+		obstaculos.forEach(function(t){
+			t.desenhar(ctx);
+
+			if(t.bateu(pc)){
+				pc.vida = 0;
+			}
+			if(t.bateu(pc2)){
+				pc2.vida = 0;
+			}
+			tiros.forEach(function(t2){
+				if(t.tomouChumbo(t2)){
+					tiros.splice(tiros.indexOf(t2), 1);
+				}
+			});
+
+
+			tiros2.forEach(function(t2){
+				if(t.tomouChumbo(t2)){
+					tiros2.splice(tiros2.indexOf(t2), 1);
+				}
+			});
+		});
+		if(pc.vida > 0)pc.desenhar(ctx);
+		if(pc2.vida > 0)pc2.desenhar(ctx);
+	}
+
+</script>
+</html>

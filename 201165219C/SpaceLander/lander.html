@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Space Lander</title>
+		<script src="imagens.js"></script>
+		<script src="desenho.js"></script>
+	</head>
+	<body>
+		<h1>Space Lander</h1>
+		<canvas width="600" height="500">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+		<script>
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			var width = tela.width;
+			var heigth = tela.heigth;
+			var fuel = 300;
+			var fps = 60;
+			var g = 30;
+			var y = 335, vy = 0, ay = 0;
+			var x = 450, vx = 0, ax = 0;
+			var dt = 1/fps;
+			var signal, vento, temVento;
+			var xPouso, yPouso, sizePouso;
+			var cont;
+			var winner = -1;
+			var imagens = new BancoDeImagens();
+			imagens.add("spaceman","./img/Spaceman.png");
+			xPouso = 0;
+			yPouso = 200;
+			sizePouso = 50;
+			cont = 0;
+			addEventListener("keydown", teclaPressionada);
+			addEventListener("keyup", teclaSolta);
+			setInterval(desenhar, 1000/fps);
+			// Desenhar o cenário a cada intervalo de tempo
+			function desenhar(){
+				vx = vx + ax*dt;
+				x = x + vx*dt;
+				vy = vy + ay*dt+g*dt;
+				y = y + vy*dt;
+				// Mantem objeto parado
+				if(y > 335){
+					if (vy > 100)
+						console.log("DERROTA!!! Muito rapido !!!");
+					y = 335;
+					vy = 0;
+				}
+				ctx.clearRect(0,0,width,heigth);
+				// Desenhar o espaço
+				drawSpace(ctx);
+				// Desenhar o chão
+				drawFloor(ctx);
+				// Desenhar astronauta	
+				imagens.desenhaXY(ctx,"spaceman",x,y);
+				// Desenha barra de combustivel
+				drawFuel(ctx,fuel);
+				// Desenha área de pouso
+				drawBase(ctx,xPouso,yPouso,sizePouso);
+
+				// Haverá vento ?
+				temVento = Math.random();
+				if (temVento < 0.05 && cont < 100 && y != 335 && winner == -1) {
+					signal = Math.floor(Math.random()*2+1); 
+					vento = Math.floor(Math.random()*20+1);
+					if (signal == 2)
+						vento *= -1;
+					console.log("Vento = "+vento);
+					console.log("Signal = "+signal);
+					ax = vento;
+					cont++;
+				}
+				else if (cont >= 100)
+				{
+					cont = 0;
+					ax = 0;
+				}
+				// Verifica limites da tela
+				if (x < 0) 	x = 0;
+				if (x > 560)	x = 560;
+				if (y < 0)	y = 0;
+				// Verifica se pousou
+				else if (y > yPouso-45 && y < yPouso+sizePouso-10 && x >= xPouso && x < xPouso+sizePouso-25)
+				{
+					if (vy > 50)
+					{
+						winner = 2;
+						x = -1;
+						y = -1;
+					}
+					else
+					{
+						winner = 1;
+						y = yPouso-45;
+					}
+					vy = ay = 0;
+					vx = ax = 0;
+				}
+				// Verifica fim de combustivel
+				if (fuel < 0) 
+					winner = 0;
+				// Verifica critério de vitória
+				drawResult(ctx,winner,width,heigth);
+					
+			}
+			// Eventos do teclado
+			function teclaPressionada(e){
+				if(e.keyCode==39){
+					ax = 60;
+					fuel--;
+				}else if(e.keyCode==37){
+					ax = -60;
+					fuel--;
+				}
+				if(e.keyCode==40){
+					ay = 30;
+					fuel--;
+				}else if(e.keyCode==38){
+					ay = -60;
+					fuel--;
+				}
+				if(e.keyCode==32){
+					vy = 0;
+				}
+			}
+			function teclaSolta(e){
+				//console.log("Tecla: "+e.keyCode);
+				if(e.keyCode==39){
+					ax = 0;
+				}else if(e.keyCode==37){
+					ax = 0;
+				}
+				if(e.keyCode==40){
+					ay = 0;
+				}else if(e.keyCode==38){
+					ay = 0;
+				}
+			}
+		</script>
+	</body>
+</html> 

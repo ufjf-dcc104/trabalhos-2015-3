@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Plataforma</title>
+		<script src="Sprite.js"></script>
+		<script src="Mapa.js"></script>
+		<script src="Bloco.js"></script>
+		<script src="Dados.js"></script>
+		<script src="SoundLib.js"></script>
+	</head>
+	<body>
+		<h1>Plataforma</h1>
+		<canvas width="800" height="240">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	
+	var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+	
+	
+	var jogo= {
+		'pontos': 0,
+		'vidas': 10,
+		'pause': false,
+		'fimdejogo': false
+	};
+	
+	var mapa = new Mapa();
+	mapa.img.src="mapa_blocos02.png";
+	
+	var pc = new Sprite();
+	pc.img.src= "Old hero.png";
+	pc.f= 1;///frame da imagem (frame 1 default)
+	pc.p= 1;///controla as poses do personagem (nos frames da imagem)
+	pc.reset= function(){
+		pc.x=16;
+		pc.y=32;
+		pc.gy=4;
+		pc.vx=0;
+	};
+	pc.reset();//configurações padrão do personagem
+	
+	
+	
+	var bloco= new BlocoDin();
+	bloco.img.src="mapa_blocos02.png";
+	
+	bloco.resetBloco= function(mapaAtual){
+		pc.x=16;
+		pc.y=32;
+		switch(mapaAtual){
+			case 0: this.gx=14;
+					this.gy=14;
+					this.vx= 20;
+			break;
+			case 1: this.gx=11;
+					this.gy=9;
+					this.vx= 30;
+			break;
+			case 2: this.gx=4;
+					this.gy=14;
+					this.vx= 30;
+			break;
+			case 3: this.gx=15;
+					this.gy=14;
+					this.vx= 40;
+			break;
+			case 4: this.gx=16;
+					this.gy=10;
+					this.vx= 50;
+			break;
+		}
+		this.x=this.gx*this.largura;
+		this.y=this.gy*this.altura;
+	}
+	bloco.resetBloco(mapa.mapaAtual);///inicia a posição do bloco no mapa atual
+	
+	
+	
+	var soundlib = new SoundLib();
+	soundlib.load("pulo", "s_pulo.mp3");
+	soundlib.load("moeda", "s_moeda.mp3");
+	soundlib.load("morte", "s_morte.mp3");
+	soundlib.load("troca", "s_troca.mp3");
+	
+	
+	
+	
+	pc.controlar = function(grid){
+		if(this.direita){
+			if(!this.sobBloco)this.ax = -80;
+			else this.ax=-800;
+		}else if(this.esquerda){
+			if(!this.sobBloco)this.ax = 80;
+			else this.ax=800;
+		}else{
+			this.ax = 0;
+		}
+		if(this.pulando && this.vy == 0){
+			this.vy = (-2.8)*g;
+			this.pulando = false;
+			soundlib.play("pulo");
+		}
+		
+		
+		//console.log(this.gy, this.gx);
+		//testa se pegou uma moeda
+		if(grid[this.gy][this.gx]==3){
+			grid[this.gy][this.gx]=0;
+			jogo.pontos++;
+			soundlib.play("moeda");
+		}
+		
+		//perdeu vida
+		if(this.gy>=mapa.linhas-2){
+			soundlib.play("morte");
+			if(jogo.vidas>0){//tem vidas ainda?
+				jogo.vidas--;
+				pc.reset();//reseta o personagem
+			}else{
+				jogo.fimdejogo=true;
+				jogo.pause=true;
+			}
+		}
+		
+	};
+	
+	pc.colidiuCom= function(bloco){
+		if (this.pulando) return;
+		var distanciaX= (this.x+this.largura/2)-(bloco.x-bloco.largura/2);
+		var colidiuX= (distanciaX>=0 && distanciaX<=this.largura+bloco.largura);
+		var distanciaY= (this.y+this.altura/2)-(bloco.y-bloco.altura/2);
+		var colidiuY= (distanciaY<=8 && distanciaY>=-bloco.altura && this.vy>=0);
+		//console.log(colidiuX, colidiuY);
+		
+		if(colidiuX && colidiuY){
+			this.sobBloco=true;
+			this.vx= bloco.vx;
+			this.vy=0;
+			this.y=bloco.y-bloco.altura/2-2;
+			this.gy= bloco.gy-1;
+		}else{
+			this.sobBloco=false;
+		}
+	};
+	
+	addEventListener("keydown", function(e){
+		if(e.keyCode==37){
+			pc.direita = true;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = true;
+		}
+		if(e.keyCode==38){
+			pc.pulando = true;
+		}
+		if(e.keyCode==13){///pause
+			jogo.pause = !jogo.pause;
+		}
+
+	});
+	addEventListener("keyup", function(e){
+		if(e.keyCode==37){
+			pc.direita = false;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = false;
+		}
+		if(e.keyCode==38){
+			pc.pulando = false;
+		}
+		if(e.keyCode==32){
+			pc.vy = (-4)*g;
+		}
+		
+	});
+
+
+	var info= new Dados();
+	
+	setInterval(passo, 1000/fps);
+	function passo(){
+
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, tela.width, tela.height);	
+		mapa.desenharMapa(ctx);
+		if(!jogo.pause){
+			pc.controlar(mapa.mapas[mapa.mapaAtual]);
+			bloco.controlar(mapa.mapas[mapa.mapaAtual]);
+			pc.moverNoGrid(mapa.mapas[mapa.mapaAtual],dt,325);
+			pc.colidiuCom(bloco);
+			bloco.moverNoGrid(mapa.mapas[mapa.mapaAtual],dt,325);
+		}
+
+		pc.desenhar(ctx,jogo);
+		bloco.desenhar(ctx,mapa.mapaAtual);
+		info.mostrarInfo(jogo,ctx,tela);
+		
+		/*Mudança de mapa*/
+		if(mapa.mapas[mapa.mapaAtual][pc.gy][pc.gx]==4){
+			soundlib.play("troca");
+			if(mapa.mapaAtual==4){
+				mapa.mapaAtual=0;
+				mapa.resetMapas();
+			}else mapa.mapaAtual++;
+			
+			bloco.resetBloco(mapa.mapaAtual);
+		}
+		
+	}
+	
+</script>
+</html>

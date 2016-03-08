@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Space Invader </title>
+    </head>
+    <body>
+        <center>
+        <h1>destrua td mundo</h1>
+        <canvas width="400" height="400">
+            navegador nao suporta!!
+        </canvas>
+        </center>
+        <script>
+        var tela = document.getElementsByTagName("canvas")[0];
+        var ctx = tela.getContext("2d");
+            
+        var  fps = 50, dt = 1/fps;
+	    var ix = 150, vx = 0,ax = 0 ;
+	    var fuel = 1000, chao = 400, ponto = 0 , vida = 3;
+	    var estado = 0, best;
+	    addEventListener("keydown", teclaDown);
+	    addEventListener("keyup", teclaUp);
+    setTimeout(main,1000/fps);	
+
+    var inimigos = {
+        _obs: [],
+        tempoNovo: 10,
+        insere: function(){
+            this._obs.push({
+                x: 25+Math.floor(370*Math.random()),
+                y: 45,
+                largura: 30,
+                altura:  30,
+                cor: "#ffffff",
+                v: 20+Math.floor(15*Math.random())
+            }); 
+        },
+
+        desenha: function(){
+            	ctx.fillStyle = this.cor;
+            for(var i=0, tam = this._obs.length ; i<tam;i++){
+            	ctx.fillRect(this._obs[i].x-this._obs[i].largura/2,
+            				this._obs[i].y-this._obs[i].altura/2,
+            				this._obs[i].largura,
+            				this._obs[i].altura);
+            }
+        },
+
+        atualiza:function(){
+        	if(this.tempoNovo == 0){
+        		this.insere();
+        		this.tempoNovo = 50+Math.floor(50*Math.random());
+        	}else{
+				this.tempoNovo--;
+        	}
+
+            for(var i=0, tam = this._obs.length ; i<tam;i++){
+            	this._obs[i].y++;
+            	if(this._obs[i].y >= chao ){
+            		vida--;
+            		if(vida == 0){
+            			estado = 3;
+            		}
+                    this._obs.splice(i, 1);
+                    tam--;
+            	}
+            }
+        },
+        limpa: function(){
+            this._obs= [];
+        },
+        colidiu: function(x1,y1){
+        	for(var i=0, tam = this._obs.length ; i<tam;i++){
+
+        		
+        		if( this._obs[i].y + this._obs[i].altura/2  >= y1 &&
+        			this._obs[i].x - this._obs[i].largura/2 <= x1 &&
+        			this._obs[i].x + this._obs[i].largura/2 >= x1){
+
+                	this._obs.splice(i, 1);
+                	tam--;
+                	return true;
+        		}
+        	}
+        }
+    };
+
+    var tiros = {
+        _obs: [],
+        cd: 0, //cooldown
+        insere: function(){
+        	if(this.cd == 0){
+            	this._obs.push({
+            		x: ix,
+            		y: chao - 20
+            	});
+            	this.cd = 20;
+        	}
+        },
+        desenha: function(){
+            for(var i=0, tam = this._obs.length ; i<tam;i++){
+        		ctx.beginPath();
+            		ctx.moveTo(this._obs[i].x,this._obs[i].y);
+            		ctx.lineTo(this._obs[i].x,this._obs[i].y+10);
+        		ctx.closePath();
+        		ctx.stroke();
+        	}
+        },
+        atualiza: function(){
+        	if(this.cd > 0) this.cd --;
+            for(var i=0, tam = this._obs.length ; i<tam;i++){
+            	this._obs[i].y--;
+            	if(this._obs[i].y <= 0 ){
+                    this._obs.splice(i, 1);
+                    tam--;
+            	}
+            }
+            this.acertou();
+        },
+        limpa: function(){
+            this._obs= [];
+        },
+        acertou: function(){
+        	for(var i=0, tam = this._obs.length ; i<tam;i++)
+        	if(inimigos.colidiu(this._obs[i].x , this._obs[i].y)){
+        		this._obs.splice(i, 1);
+            	tam--;
+            	ponto++;
+        	}
+        }
+    };
+
+    function main(){
+
+	   
+        if(estado == 1)
+	    	if (vida > 0){
+            	ix = ix + vx*dt;
+	    	}
+
+        ctx.clearRect(0,0,600,600);
+ 
+        if(estado == 3){
+        	    if(vida == 0){
+        	        if (best = localStorage.getItem("best")){
+        	            if(best < ponto){
+        	                best = ponto;
+        	                localStorage.setItem("best",best);
+        	            }
+        	        }else{
+        	            best = ponto;
+        	            localStorage.setItem("best",best);
+        	        }
+        	        
+			        ctx.font="20px Georgia";
+	                ctx.strokeText("perdeu",120,200);
+	                ctx.strokeText("pontuacao:" + ponto,100,220);
+	                ctx.strokeText("best:" + best,120,240);
+			    }
+        }
+        
+        if(estado == 0){
+		    ctx.font="20px Georgia";
+	        ctx.strokeText("press enter",120,200);
+        }
+        
+
+	    ctx.font="20px Georgia";
+	    ctx.strokeText("Vida: "+ vida,10,15);
+
+	    ctx.font="20px Georgia";
+	    ctx.strokeText("Pontos: "+ ponto,250,15);
+	    
+
+	    
+        ctx.fillStyle = "rgb(70,70,190)";
+          
+        ctx.beginPath();
+            ctx.moveTo(500,20);
+            ctx.lineTo(0,20);
+        ctx.closePath();
+        ctx.stroke();
+
+        if(estado == 1){
+        	inimigos.atualiza();
+        	tiros.atualiza();
+
+        	tiros.desenha();
+        	inimigos.desenha();
+
+	        ctx.beginPath();
+    	        ctx.moveTo(ix,chao-30);
+        	    ctx.lineTo(ix-10,chao);
+            	ctx.lineTo(ix+10,chao);
+        	ctx.closePath();
+        	ctx.fill();
+        	ctx.stroke();
+        }	
+
+	   setTimeout(main,1000/fps);	
+
+    }
+
+    function teclaUp(e){
+        if(e.keyCode == 37){// esquerda
+            vx = 0;
+        }
+		if(e.keyCode == 39){// direita
+			vx = 0;
+		}
+	}
+
+    function teclaDown(e){
+        if(e.keyCode == 37){// esquerda
+            vx = -100;
+        }
+		if(e.keyCode == 39){// direita
+			vx = +100;
+		}
+		if(e.keyCode == 38){// tiro
+			//a implementar
+			tiros.insere();
+		}
+
+		if(e.keyCode == 13){
+			if(estado != 0){
+			    if((estado == 3) && (vida == 0)){
+			        vida = 3;
+			        ponto = 0;
+			    }
+			    estado = 0;
+			}else{
+				inimigos.limpa();
+				tiros.limpa();
+			    estado = 1;
+			    ix = 150;
+			    vx= 0;
+			} 
+		}
+    }
+        </script>
+    </body>
+</html>

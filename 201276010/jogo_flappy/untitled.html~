@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Exemplo Animaçao com Controle</title>
+	</head>
+	<body>
+		<h1>Exemplo Animaçao com Controle</h1>
+		<canvas width="400" height="300" style="border : 1px solid black" >
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+		<script>
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			var posicaoParede = 395;
+			ctx.rotate(0.8);
+			var fps = 60;
+			var g = 60;
+			var y = 50, vy = 0, ay = 0;
+			var x = 10, vx = 0, ax = 0;
+			var dt = 1/fps;
+			var alvoY = 150;
+			var alvoX = 150;
+			var andarParece = 0;
+			var espacamento = 150;
+			var tamPassagem = 80 ;
+			var alturaParedeCima = 200;
+
+			addEventListener("keydown", teclaPressionada);
+			addEventListener("keyup", teclaSolta);
+
+			setInterval(desenhar, 1000/fps);
+			function desenhar(){
+				//ax = (alvoX-x)/2 - vx/2;
+				vx = vx + ax*dt;
+				x = x + vx*dt;
+
+				//ay = (alvoY-y)/2  - vy/2;
+				vy = vy + ay*dt+g*dt;
+				y = y + vy*dt;
+				posicaoParede = posicaoParede - 50*dt;
+				/*
+				if((y > 150 && ay >0) || (y <50 && ay<0)){
+					ay = -ay;
+				}
+				*/
+				if(y > 250){
+					y = 250;
+					vy = 0;
+
+				}
+
+				ctx.clearRect(0,0, 400, 300);	
+
+				ctx.strokeStyle = "black";
+				ctx.fillStyle = "rgb(250, 150, 150)";
+				ctx.beginPath();
+				ctx.moveTo(x, 30+y);
+				ctx.lineTo(20+x, 30+y);
+				ctx.lineTo(10+x,    y);
+				ctx.closePath();
+				ctx.fill();
+				ctx.stroke();
+				
+				ctx.fillRect(posicaoParede,0,10,alturaParedeCima);
+				ctx.fillRect(posicaoParede,300,10,-(300-(alturaParedeCima + tamPassagem)));
+
+
+				ctx.fillRect(posicaoParede + espacamento*1,0,10,alturaParedeCima %181);
+				ctx.fillRect(posicaoParede + espacamento*1,300,10,-(300-(((alturaParedeCima %181) + tamPassagem))));
+
+				ctx.fillRect(posicaoParede + espacamento*2,0,10,(alturaParedeCima+1300) %181);
+				ctx.fillRect(posicaoParede + espacamento*2,300,10,-(300-(((alturaParedeCima+1300 ) %181) + tamPassagem)));
+
+				ctx.fillRect(posicaoParede + espacamento*3,0,10,  (alturaParedeCima+2000) %181);
+				ctx.fillRect(posicaoParede + espacamento*3,300,10,-(300-(((alturaParedeCima + 2000) %181) + tamPassagem)));
+
+				ctx.fillRect(posicaoParede + espacamento*4,0,10,(alturaParedeCima+3000) %181);
+				ctx.fillRect(posicaoParede + espacamento*4,300,10,-(300-(((alturaParedeCima + 3000 ) %181) + tamPassagem)));
+
+
+				
+
+			}
+
+			function teclaPressionada(e){
+				console.log("Tecla: "+e.keyCode);
+				//if(e.keyCode==39){
+				//	ax = 60;
+				//}else if(e.keyCode==37){
+				//	ax = -60;
+				//}
+				if(e.keyCode==40){
+					ay = 30;
+				}else if(e.keyCode==38){
+					ay = -30;
+				}
+				if(e.keyCode==32){
+					vy = -60;
+				}
+			}
+			function teclaSolta(e){
+				console.log("Tecla: "+e.keyCode);
+				if(e.keyCode==39){
+					ax = 0;
+				}else if(e.keyCode==37){
+					ax = 0;
+				}
+				if(e.keyCode==40){
+					ay = 0;
+				}else if(e.keyCode==38){
+					ay = 0;
+				}
+			}
+		</script>
+	</body>
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+

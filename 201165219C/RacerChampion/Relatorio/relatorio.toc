@@ -1,0 +1,6 @@
+\select@language {brazil}
+\contentsline {section}{\numberline {1}Descri\IeC {\c c}\IeC {\~a}o do Jogo}{4}
+\contentsline {section}{\numberline {2}Experi\IeC {\^e}ncia}{4}
+\contentsline {section}{\numberline {3}Modelo de Dados}{4}
+\contentsline {section}{\numberline {4}Implementa\IeC {\c c}\IeC {\~a}o}{5}
+\contentsline {section}{\numberline {5}Trabalhos Futuros}{5}
