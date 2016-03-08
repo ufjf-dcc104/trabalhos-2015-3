@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Plataforma</title>
+    <audio autoplay loop>
+        <source src="sons/music.wav">
+    </audio>
+
+    <script src="Sprite.js"></script>
+    <script src="Tiro.js"></script>
+    <script src="Escudo.js"></script>
+    <script src="SoundLib.js"></script>
+    <style type="text/css" media="screen"></style>
+</head>
+<body>
+<canvas width="1200" height="600">
+    Seu navegador nao tem suporte ao canvas!
+</canvas>
+
+<script>
+    // constantes
+    var MAX_VIDA = 300;
+    var MAX_MANA = 300;
+    // variáveis
+    var tela = document.getElementsByTagName("canvas")[0];
+    var ctx = tela.getContext("2d");
+    var mapa = [];
+    var fps = 60;
+    var g = 60;
+    var dt = 1/fps;
+    var player1 = new Player(100, 130, "player1");
+    var player2 = new Player(1070, 130, "player2");
+    var inimigo = new Inimigo(600, 300);
+    var bonus = new Sprite();
+    var dia = new Date();
+    var tempo = dia.getTime();
+
+    //carregando todas as imagens
+    var imagens = new BancoDeImagens();
+    imagens.add("player1", "imagens/megamen.png");
+    imagens.add("player2", "imagens/Zero.png");
+    imagens.add("inimigo", "imagens/rush.png");
+    imagens.add("terreno", "imagens/plataforma.png");
+    imagens.add("escudo", "imagens/escudo.png");
+    imagens.add("escudoInvertido","imagens/escudoInvertido.png");
+    imagens.add("tiro", "imagens/tiro.png");
+    imagens.add("superTiro", "imagens/SuperTiro.png");
+    imagens.add("tiroInvertido", "imagens/tiroInvertido.png");
+    imagens.add("superTiroInvertido", "imagens/SuperTiroInvertido.png");
+    imagens.add("bonus", "imagens/aura.png");
+    imagens.add("fundo", "imagens/fundo.png");
+    imagens.add("escada","imagens/escada.png");
+    imagens.add("escada2","imagens/escada2.png");
+
+    //carregando todos os sons
+    var soundlib = new SoundLib();
+    //http://soundbible.com/1601-Mario-Jumping.html
+    soundlib.load("pulo", "sons/Mario_Jumping-Mike_Koenig-989896458.wav");
+    //http://legalgames-blog.blogspot.com.br/2009/06/efeitos-sonoros-megaman-3.html#!/tcmbck
+    soundlib.load("tiro", "sons/tiro.wav");
+    soundlib.load("bonus", "sons/aura.wav");
+    soundlib.load("morre", "sons/morre.wav");
+    soundlib.load("defende", "sons/defende.wav");
+    soundlib.load("colideCenario", "sons/colideCenario.wav");
+
+
+    function BancoDeImagens(){ // armazena e desenha todas as imagens do programa
+        this.imagens = {};
+        this.add = function(nome, url){
+            this.imagens[nome] = new Image();
+            this.imagens[nome].src = url;
+        };
+        this.desenhaXY =function(ctx, nome, x, y){
+            ctx.drawImage(this.imagens[nome], x, y);
+        };
+        this.desenhaXYWH =function(ctx, nome, x, y, w, h){
+            ctx.drawImage(this.imagens[nome], x, y, w, h);
+        };
+        this.desenha = function(ctx, nome,
+                                x, y, w, h,
+                                dx, dy, dw, dh
+        ){
+            ctx.drawImage(this.imagens[nome], x, y, w, h,
+                    dx, dy, dw, dh);
+        };
+    }
+    //*************************************************************
+    // Mapa
+    for (var l = 0; l < 20; l++) { //cria o mapa
+        mapa[l] = [];
+        for (var c = 0; c < 40; c++){
+            mapa[l][c] = 0;
+            if(l==19 || c == 0 || c == 39) mapa[l][c] = 1;
+            if(Math.random()<0.10){
+                mapa[l][c] = 1;
+            }
+        }
+    }
+    function desenharMapa(){ //desenha o mapa
+        for (var l = 0; l < 20; l++) {
+            for (var c = 0; c < 40; c++){
+                if(mapa[l][c] == 1 && c == 0){
+                    imagens.desenha(ctx, "escada", 0, 16, 32, 64, c * 30, l * 30, 30, 40);
+                }else if(mapa[l][c] == 1 && c == 39) {
+                    imagens.desenha(ctx, "escada2", 0, 16, 32, 64, c * 30, l * 30, 30, 40);
+                }else if(mapa[l][c]==1) {
+                    imagens.desenha(ctx, "terreno", 0, 0, 64, 64, c * 30, l * 30, 30, 20);
+                }
+            }
+        }
+    }
+
+
+    //*************************************************************
+    //bonus
+    bonus.x = Math.random() % tela.width;
+    bonus.playerComBonus = false;
+    bonus.player = null;
+    bonus.f = 0;
+    bonus.p = 0;
+    bonus.desenhar = function(ctx){
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angulo+Math.PI/2);
+        this.f += 10 * dt;
+        if(bonus.playerComBonus == true){
+            bonus.x = this.player.x;
+            bonus.y = this.player.y;
+            this.p = 1;
+        }
+        else{
+            this.p = 0;
+        }
+        //controla qual parte da imagem será exibida
+        switch(this.p){
+            case 0:
+                this.f = 0;
+                break;
+            case 1:
+                if(this.f > 3) this.f = 0;
+                break;
+        }
+        imagens.desenha(ctx, "bonus", Math.floor(this.f)*64, this.p*64, 64, 64, -40, -40, 64, 64);
+        ctx.restore();
+    };
+    bonus.reset = function(){
+        bonus.x = 30*Math.random()*20+1;
+        bonus.y = 30;
+        bonus.vy = 0;
+        bonus.vx = 0;
+        bonus.playerComBonus = false;
+    };
+
+    //*************************************************************
+    addEventListener("keydown", function(e){
+        if(e.keyCode==37){// Seta para a direita
+            player1.direita = true;
+        }
+        if(e.keyCode==39){// Seta para a esquerda
+            player1.esquerda = true;
+        }
+        if(e.keyCode==38){// Seta para cima
+            player1.pulando = true;
+        }
+        if(e.keyCode==80){// P
+            player1.atira = true;
+        }
+        if(e.keyCode==79){// O
+            player1.defende = true;
+        }
+        if(e.keyCode==40){// Seta para baixo
+            player1.descendo = true;
+        }
+        if(e.keyCode==68){// D
+            player2.esquerda = true;
+        }
+        if(e.keyCode==65){// A
+            player2.direita = true;
+        }
+        if(e.keyCode==87){// W
+            player2.pulando = true;
+        }
+        if(e.keyCode==32){// Espaço
+            player2.atira = true;
+        }
+        if(e.keyCode==88){// X
+            player2.defende = true;
+        }
+        if(e.keyCode==83){// S
+            player2.descendo = true;
+        }
+
+    });
+
+    addEventListener("keyup", function(e){
+        if(e.keyCode==37){// Seta para a direita
+            player1.direita = false;
+        }
+        if(e.keyCode==39){// Seta para a esquerda
+            player1.esquerda = false;
+        }
+        if(e.keyCode==38){// Seta para cima
+            player1.pulando = false;
+        }
+        if(e.keyCode==80){// P
+            player1.atira = false;
+        }
+        if(e.keyCode==79){// O
+            player1.defende = false;
+        }
+        if(e.keyCode==40){// Seta para baixo
+            player1.descendo = false;
+        }
+        if(e.keyCode==68){// D
+            player2.esquerda = false;
+        }
+        if(e.keyCode==65){// A
+            player2.direita = false;
+        }
+        if(e.keyCode==87){// W
+            player2.pulando = false;
+        }
+        if(e.keyCode==32){// Espaço
+            player2.atira = false;
+        }
+        if(e.keyCode==88){// X
+            player2.defende = false;
+        }
+        if(e.keyCode==83){// S
+            player2.descendo = false;
+        }
+
+    });
+
+    setInterval(passo, 1000/fps);
+    //***********************************************************************
+    //função principal
+    function passo(){
+        imagens.desenhaXYWH(ctx, "fundo", 0 , 0, tela.width, tela.height);
+        desenharMapa();
+
+        //bonus
+        bonus.controlar();
+        bonus.moverCartGrid(dt,200, mapa);
+        bonus.desenhar(ctx);
+        if(bonus.playerComBonus == false && player1.colidiuCom(bonus)){
+            bonus.playerComBonus = true;
+            bonus.player = player1;
+            soundlib.play("bonus", 5);
+        }
+        if(bonus.playerComBonus == false && player2.colidiuCom(bonus)){
+            bonus.playerComBonus = true;
+            bonus.player = player2;
+            soundlib.play("bonus", 5);
+        }
+
+        //player 1
+        player1.controlar();
+        player1.desenhar(ctx);
+        player1.desenhaEscudo(ctx);
+        player1.movimenta();
+
+        //player 2
+        player2.controlar();
+        player2.desenhar(ctx);
+        player2.desenhaEscudo(ctx);
+        player2.movimenta();
+
+        if(inimigo.exibirInimigo) { //confere se o inimigo deve ser exibido na tela
+            //inimigo
+            inimigo.controlar();
+            inimigo.moverCartGrid(dt, 200, mapa);
+            inimigo.desenhar(ctx);
+            inimigo.atira();
+            inimigo.defende();
+            inimigo.desenhaEscudo();
+        }
+
+        //confere se um player coliciu com outro player
+        if(player1.colidiuCom(player2)){
+            player1.x = 30;
+            player1.y = 30;
+            player1.vy = 0;
+            player1.vx = 0;
+            player2.x = tela.width - 30;
+            player2.y = 30;
+            player2.vy = 0;
+            player2.vx = 0;
+            soundlib.load("morre",5);
+        }
+
+        //confere se há colisão do tiro do player 1 com o player 2 ou com o inimigo
+        for(var i=0;i<player1.hit.length;i++){
+            if(player1.hit[i].x >= 1200 || player1.hit[i].x <= 0){
+                player1.hit.splice(i,1);
+                i--;
+            }else{
+                player1.hit[i].mover(dt);
+                player1.hit[i].desenhar(ctx);
+                if(inimigo.exibirInimigo && player1.hit[i].colidiuCom(inimigo.escudo)){
+                    player1.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("defende", 5);
+                }
+                else if(player1.hit[i].colidiuCom(player2.escudo)){
+                    player1.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("defende", 5);
+                }
+                else if(inimigo.exibirInimigo && player1.hit[i].colidiuCom(inimigo)){
+                    inimigo.x = 30;
+                    inimigo.y = 30;
+                    inimigo.vy = 0;
+                    inimigo.vx = 0;
+                    if(player1.hit[i].tiroComBonus == true)
+                        inimigo.vidas  = inimigo.vidas - 100;
+                    else
+                        inimigo.vidas = inimigo.vidas - 50;
+                    player1.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("morre", 5);
+                }
+                else if(player1.hit[i].colidiuCom(player2)) {
+                    player2.x = tela.width - 30;
+                    player2.y = 30;
+                    player2.vy = 0;
+                    player2.vx = 0;
+                    if(player1.hit[i].tiroComBonus == true)
+                        player2.vidas  = player2.vidas - 100;
+                    else
+                        player2.vidas = player2.vidas - 50;
+                    player1.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("morre", 5);
+                }
+                else {
+                    var gcx = Math.floor(player1.hit[i].x / 30);
+                    var gcy = Math.floor(player1.hit[i].y / 30);
+                    if (mapa[gcy][gcx] == 1 && gcx != 39 && gcx != 0) { //CONFERE SE O TIRO COLIDE COM O MAPA, SE SIM DESTROI O MAPA E O TIRO
+                        mapa[gcy][gcx] = !mapa[gcy][gcx];
+                        soundlib.play("colideCenario", 5);
+                    }
+                }
+            }
+        }
+
+        //confere se há colisão do tiro do player 2 com o player 1 ou com o inimigo
+        for(var i=0;i<player2.hit.length;i++){
+            if(player2.hit[i]>1200 || player2.hit[i] < 0){
+                player2.hit.splice(i,1);
+                i--;
+            }else{
+                player2.hit[i].mover(dt);
+                player2.hit[i].desenhar(ctx);
+                if(inimigo.exibirInimigo && player2.hit[i].colidiuCom(inimigo.escudo)){
+                    player2.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("defende", 5);
+                }
+                else if(player2.hit[i].colidiuCom(player1.escudo)){
+                    player2.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("defende", 5);
+                }
+                else if(inimigo.exibirInimigo && player2.hit[i].colidiuCom(inimigo)){
+                    inimigo.x = 30;
+                    inimigo.y = 30;
+                    inimigo.vy = 0;
+                    inimigo.vx = 0;
+                    if(player2.hit[i].tiroComBonus == true)
+                        inimigo.vidas  = inimigo.vidas - 100;
+                    else
+                        inimigo.vidas = inimigo.vidas - 50;
+                    player2.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("morre", 5);
+                }
+                else if(player2.hit[i].colidiuCom(player1)) {
+                    player1.x = 30;
+                    player1.y = 30;
+                    player1.vy = 0;
+                    player1.vx = 0;
+                    if(player2.hit[i].tiroComBonus == true)
+                        player1.vidas  = player1.vidas - 100;
+                    else
+                        player1.vidas = player1.vidas - 50;
+                    player2.hit.splice(i, 1);
+                    i--;
+                    soundlib.play("morre", 5);
+                }
+                else {
+                    var gcx = Math.floor(player2.hit[i].x / 30);
+                    var gcy = Math.floor(player2.hit[i].y / 30);
+                    if (mapa[gcy][gcx] == 1 && gcx != 39 && gcx != 0) { //CONFERE SE O TIRO COLIDE COM O MAPA, SE SIM DESTROI O MAPA E O TIRO
+                        mapa[gcy][gcx] = !mapa[gcy][gcx];
+                        soundlib.play("colideCenario", 5);
+                    }
+                }
+            }
+        }
+
+        //confere se há colisão do tiro do inimigo com o player 1 ou com o player 2
+        for(var i=0;i<inimigo.hit.length;i++){
+            if(inimigo.exibirInimigo){
+                if(inimigo.hit[i]>1200 || inimigo.hit[i] < 0){
+                    inimigo.hit.splice(i,1);
+                    i--;
+                }else{
+                    inimigo.hit[i].mover(dt);
+                    inimigo.hit[i].desenhar(ctx);
+                    if(inimigo.hit[i].colidiuCom(player1.escudo) || inimigo.hit[i].colidiuCom(player2.escudo)) {
+                        inimigo.hit.splice(i, 1);
+                        i--;
+                        soundlib.play("defende", 5);
+                    }
+                    else if(inimigo.hit[i].colidiuCom(player1) && inimigo.player == player1){
+                        player1.x = 30;
+                        player1.y = 30;
+                        player1.vy = 0;
+                        player1.vx = 0;
+                        player1.vidas = player1.vidas - 50;
+                        inimigo.hit.splice(i, 1);
+                        i--;
+                        soundlib.play("morre", 5);
+                    }
+                    else if(inimigo.hit[i].colidiuCom(player2) && inimigo.player == player2){
+                        player2.x = tela.width - 30;
+                        player2.y = 30;
+                        player2.vy = 0;
+                        player2.vx = 0;
+                        player2.vidas = player2.vidas - 50;
+                        inimigo.hit.splice(i, 1);
+                        i--;
+                        soundlib.play("morre", 5);
+                    }
+                    else{
+                        var gcx = Math.floor(inimigo.hit[i].x/30);
+                        var gcy = Math.floor(inimigo.hit[i].y/30);
+                        if (mapa[gcy][gcx] == 1 && gcx != 39 && gcx != 0) { //CONFERE SE O TIRO COLIDE COM O MAPA, SE SIM DESTROI O MAPA E O TIRO
+                            mapa[gcy][gcx] = !mapa[gcy][gcx];
+                            soundlib.play("colideCenario", 5);
+                        }
+                    }
+                }
+            }
+        }
+
+        //imprime na tela a quantidade de vidas
+
+        var d = new Date();
+        var horaAtual = d.getTime() - tempo;
+        horaAtual = Math.floor(horaAtual/ (1000));
+
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.fillText("Player 1 Vidas = "+ player1.vidas, 310, 10, 100);
+        ctx.fillText("Player 2 Vidas = "+ player2.vidas, 310, 20, 100);
+        ctx.fillText("Ajudante Vidas = "+ inimigo.vidas, 310, 30, 100);
+        ctx.fillText("Tempo = " + horaAtual, 310, 40, 100);
+        ctx.closePath();
+        ctx.stroke();
+        //barra de vida do player 1
+        ctx.fillStyle = "red";
+        ctx.fillRect(1,1,player1.vidas,10);
+        ctx.strokeStyle = "dark";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(1,1,player1.vidas,10);
+        //barra de mana do player 1
+        ctx.fillStyle = "blue";
+        ctx.fillRect(1,15,player1.mana,10);
+        ctx.strokeStyle = "dark";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(1,15,player1.mana,10);
+        //barra de vida do player 2
+        ctx.fillStyle = "red";
+        ctx.fillRect(tela.width-player2.vidas,1,player2.vidas,10);
+        ctx.strokeStyle = "dark";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(tela.width-player2.vidas,1,player2.vidas,10);
+        //barra de mana do player 2
+        ctx.fillStyle = "blue";
+        ctx.fillRect(tela.width-player2.mana,15,player2.mana,10);
+        ctx.strokeStyle = "dark";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(tela.width-player2.mana,15,player2.mana,10);
+
+        player1.intervaloHit+=dt*30;
+        player1.intervaloEscudo+=dt*30;
+        player2.intervaloHit+=dt*30;
+        player2.intervaloEscudo+=dt*30;
+
+        if(inimigo.exibirInimigo){
+            inimigo.intervaloHit+=dt*30;
+            inimigo.intervaloEscudo+=dt*30;
+        }
+        if(player1.vidas <= 0) {
+            ctx.clearRect(0, 0, tela.width, tela.height);
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.fillText("Vitória do Player 2", tela.width/2, tela.height/2, 1000);
+            ctx.closePath();
+            ctx.stroke();
+        }else if(player2.vidas <= 0) {
+            ctx.clearRect(0, 0, tela.width, tela.height);
+            ctx.fillStyle = "black";
+            ctx.beginPath();
+            ctx.fillText("Vitória do Player 1", tela.width/2, tela.height/2, 1000);
+            ctx.closePath();
+            ctx.stroke();
+        }else if(inimigo.vida <= 0){
+            inimigo.exibirInimigo = false;
+        }
+        // aumenta a mana dos players e do inimigo
+        if(player1.mana < MAX_MANA)
+            player1.mana += 5*dt;
+        if(player2.mana < MAX_MANA)
+            player2.mana += 5*dt;
+        if(inimigo.mana < MAX_MANA)
+            inimigo.mana += 5*dt;
+
+        //confere se a vida de algum dos players está baixa, se sim chama um ajudante para auxilia-lo
+        if(player1.vidas < 100 && inimigo.exibirInimigo == false){
+            inimigo.exibirInimigo = true;
+            inimigo.player = player2;
+        }else if(player2.vidas < 100 && inimigo.exibirInimigo == false) {
+            inimigo.exibirInimigo = true;
+            inimigo.player = player1;
+        }
+    }
+    addEventListener("mousedown", clique);
+    function clique(e){
+        console.dir(e);
+        var gcx = Math.floor(e.offsetX/30);
+        var gcy = Math.floor(e.offsetY/30);
+        mapa[gcy][gcx] = !mapa[gcy][gcx];
+    }
+
+
+    //*************************************************************
+    // Player
+    function Player(x, y, img){
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.ax = 0;
+        this.ay = 0;
+        this.w = 30;
+        this.h = 30;
+        this.velocidade = 0;
+        this.angulo = -Math.PI/2;
+        this.va = 0;
+        this.atx = 1.5;
+        this.aty = 0;
+
+        this.hit = new Array();
+        this.escudo = new SpriteEscudo();
+        this.f = 0;
+        this.p = 0;
+        this.velocidadeHit = 250;
+        this.intervaloHit = 10;
+        this.frequenciaHit = 100;
+        this.vidas = MAX_VIDA;
+        this.mana = MAX_MANA;
+        this.img = img;
+
+        this.moverAng = function(dt, g){
+            this.angulo = this.angulo + this.va*dt;
+            this.vx = Math.cos(this.angulo)*this.velocidade;
+            this.vy = Math.sin(this.angulo)*this.velocidade;
+            this.x = this.x + this.vx*dt;
+
+            this.y = this.y + this.vy*dt;
+        };
+
+        this.moverCart = function(dt, g){
+            this.ax -= this.atx*(this.vx);
+            this.ay -= this.aty*(this.vy);
+
+            this.vx = this.vx + this.ax*dt;
+            this.vy = this.vy + this.ay*dt + g*dt;
+
+            this.x = this.x + this.vx*dt;
+            this.y = this.y + this.vy*dt;
+        };
+
+        this.moverCartGrid = function(dt, g, grid){
+            this.ax -= this.atx*(this.vx);
+            this.ay -= this.aty*(this.vy);
+
+            this.vx = this.vx + this.ax*dt;
+            this.vy = this.vy + this.ay*dt + g*dt;
+
+            this.gx = Math.floor(this.x/30);
+            this.gy = Math.floor((this.y+14)/30);
+
+            this.x = this.x + this.vx*dt;
+            if(grid[this.gy+1][this.gx]==1){
+                var dy = Math.min(this.vy*dt,(this.gy+1)*30-(this.y+this.h/2));
+                if(dy == 0) this.vy = 0;
+                this.y += dy;
+            } else {
+                this.y = this.y + this.vy*dt;
+            }
+            if(this.x<8) this.x = 8;
+            if(this.y<8) this.y = 8;
+            if(this.x+this.w/2>30*40) this.x = 30*40-this.w/2;
+            if(this.y+this.h/2>30*40) this.y = 30*40-this.h/2;
+        };
+
+        this.controlar = function(){
+            if(this.direita){
+                this.ax = -180;
+            }else if(this.esquerda){
+                this.ax =  180;
+            }else{
+                this.ax = 0;
+            }
+            if(this.pulando && this.vy == 0){
+                var gcx = Math.floor(this.x/30);
+                if(gcx == 0 || gcx == 39){
+                    this.vy = -100;
+                }else {
+                    this.vy = -2 * g;
+                    soundlib.play("pulo", 5);
+                }
+            }else if(this.descendo){
+                var gcx = Math.floor(this.x/30);
+                if(gcx == 0 || gcx == 39) {
+                    this.ay = 0;
+                    this.vy = 100;
+                }
+            }
+            if(this.atira){ // se o botão de tiro foi pressionado cria um tiro e insere no vetor de tiros
+                if(this.intervaloHit > this.frequenciaHit && this.mana > MAX_MANA * 0.2) {
+                    if(this.vx < 0){
+                        if(bonus.playerComBonus == true && bonus.player == this) {
+                            this.hit.push(new SpriteTiro(this.x - 32, this.y - 16, "superTiroInvertido", -this.velocidadeHit, true));
+                            bonus.reset();
+                        }
+                        else{
+                            this.hit.push(new SpriteTiro(this.x - 32, this.y - 16, "tiroInvertido", -this.velocidadeHit, false));
+                        }
+                    }else {
+                        if (bonus.playerComBonus == true && bonus.player == this) {
+                            this.hit.push(new SpriteTiro(this.x + 32, this.y - 16, "superTiro", this.velocidadeHit, true));
+                            bonus.reset();
+                        }
+                        else {
+                            this.hit.push(new SpriteTiro(this.x + 32, this.y - 16, "tiro", this.velocidadeHit, false));
+                        }
+                    }
+                    this.intervaloHit = 0;
+                    this.mana -= MAX_MANA * 0.2;
+                    soundlib.play("tiro", 5);
+                }
+            }
+            if(this.defende == true){
+                if(this.mana > MAX_MANA * 0.6) {
+                    this.escudo.tempoEscudo = 0;
+                    this.mana = this.mana - MAX_MANA * 0.6;
+                }
+            }
+        };
+
+        this.desenhar = function(ctx){
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angulo+Math.PI/2);
+
+            var gcxP1 = Math.floor(this.x/30);
+            this.f += 9 * dt;
+
+            if(Math.abs(this.vx) < 2) { // verifica se ele está parado
+                this.vx = 0;
+                this.p = 0;
+                ctx.scale(4, 4);
+            }else if(gcxP1 == 0 || gcxP1 == 39) {  // verifica se ele está subindo a escada
+                this.p = 4;
+                ctx.scale(4, 4);
+            }else if(this.vy < 0){  // verifica se ele está pulando
+                if(this.vx > 0){
+                    this.p = 2;
+                    ctx.scale(4, 4);
+                }else{
+                    this.p = 2;
+                    ctx.scale(-4, 4);
+                }
+            }else if(this.vy > 0){  // verifica se ele está caindo
+                if(this.vx > 0){
+                    this.p = 3;
+                    ctx.scale(4, 4);
+                }else{
+                    this.p = 3;
+                    ctx.scale(-4, 4);
+                }
+            }else if(this.vx > 0) {  // verifica se ele está andando para a direita
+                this.p = 1;
+                ctx.scale(4, 4);
+            }else if(this.vx < 0){  // verifica se ele está andando para a esquerda
+                this.p = 1;
+                ctx.scale(-4, 4);
+            }
+
+            switch(this.p){ // controla o f para exibir somente os movimentos desejados
+                case 0:
+                    if(this.f > 4) this.f = 0;
+                    break;
+                case 1:
+                    if(this.f > 4) this.f = 0;
+                    break;
+                case 2:
+                    if(this.f > 4) this.f = 0;
+                    break;
+                case 3:
+                    if(this.f > 4) this.f = 0;
+                    break;
+                case 4:
+                    if(this.f > 4) this.f = 0;
+                    break;
+            }
+            imagens.desenha(ctx, img, Math.floor(this.f)*64, this.p*64, 64, 64, -10, -10, 16, 16);
+            ctx.restore();
+        };
+
+        this.colidiuCom = function(alvo){
+            if(this.x > alvo.x+alvo.w) return false;
+            if(this.x+this.w < alvo.x) return false;
+            if(this.y > alvo.y+alvo.h) return false;
+            if(this.y+this.h < alvo.y) return false;
+            return true;
+        };
+
+        // passa as coordenadas para a função de desenhar do escudo resolver se ele irá ou não ser desenhado
+        this.desenhaEscudo = function(ctx){
+            if(this.vx < 0){
+                this.escudo.desenhar(ctx, "escudoInvertido", this.x - 45, this.y - 25, dt);
+            }
+            else{
+                this.escudo.desenhar(ctx, "escudo", this.x - 20, this.y - 25, dt);
+            }
+        };
+
+        this.movimenta = function(){
+            var gcxP1 = Math.floor(this.x/30);
+            if((gcxP1 == 0 || gcxP1 == 39) && (this.pulando || this.descendo)) this.moverCartGrid(dt,0, mapa);
+            else this.moverCartGrid(dt,200, mapa);
+        }
+    }
+
+
+    //*************************************************************
+    //inimigo
+    function Inimigo(x, y){
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.ax = 0;
+        this.ay = 0;
+        this.w = 30;
+        this.h = 30;
+        this.velocidade = 0;
+        this.angulo = -Math.PI/2;
+        this.va = 0;
+        this.atx = 1.5;
+        this.aty = 0;
+        this.exibirInimigo = false;
+        this.player;
+
+        this.hit = new Array();
+        this.escudo = new SpriteEscudo();
+        this.velocidadeHit = 250;
+        this.intervaloHit = 10;
+        this.frequenciaHit = 100;
+        this.x = 30*18;
+        this.f = 1;
+        this.p = 1;
+        this.vidas = MAX_VIDA;
+        this.mana = MAX_MANA;
+
+        this.moverAng = function(dt, g){
+            this.angulo = this.angulo + this.va*dt;
+            this.vx = Math.cos(this.angulo)*this.velocidade;
+            this.vy = Math.sin(this.angulo)*this.velocidade;
+            this.x = this.x + this.vx*dt;
+
+            this.y = this.y + this.vy*dt;
+        };
+
+        this.moverCart = function(dt, g){
+            this.ax -= this.atx*(this.vx);
+            this.ay -= this.aty*(this.vy);
+
+            this.vx = this.vx + this.ax*dt;
+            this.vy = this.vy + this.ay*dt + g*dt;
+
+            this.x = this.x + this.vx*dt;
+            this.y = this.y + this.vy*dt;
+        };
+
+        this.moverCartGrid = function(dt, g, grid){
+            this.ax -= this.atx*(this.vx);
+            this.ay -= this.aty*(this.vy);
+
+            this.vx = this.vx + this.ax*dt;
+            this.vy = this.vy + this.ay*dt + g*dt;
+
+            this.gx = Math.floor(this.x/30);
+            this.gy = Math.floor((this.y+14)/30);
+
+            this.x = this.x + this.vx*dt;
+            if(grid[this.gy+1][this.gx]==1){
+                var dy = Math.min(this.vy*dt,(this.gy+1)*30-(this.y+this.h/2));
+                if(dy == 0) this.vy = 0;
+                this.y += dy;
+            } else {
+                this.y = this.y + this.vy*dt;
+            }
+            if(this.x<8) this.x = 8;
+            if(this.y<8) this.y = 8;
+            if(this.x+this.w/2>30*40) this.x = 30*40-this.w/2;
+            if(this.y+this.h/2>30*40) this.y = 30*40-this.h/2;
+        };
+
+        this.controlar = function () {
+            if(player1.vidas < 100) {
+                if (this.x >= player2.x) {
+                    this.ax = -150;
+                } else if (this.x < player2.x) {
+                    this.ax = 150;
+                }
+                if (this.y > player2.y && this.vy == 0) {
+                    this.vy -= 2 * g;
+                    soundlib.play("pulo", 5);
+                }
+            } else if(player2.vidas < 100) {
+                if (this.x >= player1.x) {
+                    this.ax = -150;
+                } else if (this.x < player1.x) {
+                    this.ax = 150;
+                }
+                if (this.y > player1.y && this.vy == 0) {
+                    this.vy -= 2 * g;
+                    soundlib.play("pulo", 5);
+                }
+            }
+
+        };
+        this.atira = function(){  // a partir de uma chance randomica cria um tiro e insere no vetor de tiros
+            if(Math.random()<0.01){
+                if(this.intervaloHit > this.frequenciaHit && this.mana > MAX_MANA * 0.2) {
+                    if(this.vx < 0)
+                        this.hit.push(new SpriteTiro(this.x - 32, this.y - 16, "tiro", -this.velocidadeHit, false));
+                    else
+                        this.hit.push(new SpriteTiro(this.x - 32, this.y - 16, "tiro", this.velocidadeHit, false));
+                    this.intervaloHit = 0;
+                    this.mana -= MAX_MANA * 0.2;
+                    soundlib.play("tiro", 5);
+                }
+            }
+        };
+
+        this.defende = function(){ //  a partir de uma chance randomica exibe ou não o escudo
+            if(Math.random()<0.01){
+                if(this.mana > MAX_MANA * 0.6) {
+                    this.escudo.tempoEscudo = 0;
+                    this.mana = this.mana - MAX_MANA * 0.6;
+                }
+            }
+        };
+
+        this.desenhar = function(ctx){
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angulo+Math.PI/2);
+            if(Math.abs(this.vx) < 2) {
+                this.vx = 0;
+                this.p = 0;
+                ctx.scale(4, 4);
+            }
+            else if(this.vx > 0) {
+                this.p = 1;
+                ctx.scale(-4, 4);
+            }else if(this.vx < 0){
+                this.p = 1;
+                ctx.scale(4, 4);
+            }
+            this.f += 6*dt;
+            if(this.vy < 0){
+                this.p = 2;
+            }else if(this.vy > 0){
+                this.p = 3;
+            }
+            switch(this.p){
+                case 0:
+                    if(this.f > 4) this.f = 0;
+                    break;
+                case 1:
+                    if(this.f > 4) this.f = 0;
+                    break;
+                case 2:
+                    if(this.f > 4) this.f = 0;
+                    break;
+                case 3:
+                    if(this.f > 4) this.f = 0;
+                    break;
+            }
+            imagens.desenha(ctx, "inimigo", Math.floor(this.f)*64, this.p*64, 64, 64, -10, -10, 16, 16);
+            ctx.restore();
+        };
+
+        this.colidiuCom = function(alvo){
+            if(this.x > alvo.x+alvo.w) return false;
+            if(this.x+this.w < alvo.x) return false;
+            if(this.y > alvo.y+alvo.h) return false;
+            if(this.y+this.h < alvo.y) return false;
+            return true;
+        };
+
+        this.desenhaEscudo = function(){
+            if(this.vx < 0) this.escudo.desenhar(ctx, "escudoInvertido", this.x - 65, this.y - 25, dt);
+            else this.escudo.desenhar(ctx, "escudo", this.x, this.y - 25, dt);
+        }
+    }
+</script>
+</body>
+</html>
