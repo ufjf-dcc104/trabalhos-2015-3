@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Moon Lander</title>
+
+<link rel="stylesheet" type="text/css" href="barra.css">
+	</head>
+	<body>
+		<h1>Moon Lander</h1>
+		<progress value="100" max="100">
+		</progress><br/>
+		<canvas width="400" height="600">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+				<img id="scream" width="0" height="0" src="spaceshipset32x32/player_ship.png" alt="The Scream">
+
+
+		<script>
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+
+			var fuel = document.getElementsByTagName("progress")[0];
+			var estatico = 0;
+			var img=document.getElementById("scream");
+			ctx.drawImage(img,10,10,150,180);
+
+
+			var fps = 60;
+			var g = 60;
+			var y = 30, vy = 0, ay = 0;
+			var x = 130, vx = 0, ax = 0;
+			var dt = 1/fps;
+			var alvoY = 150;
+			var alvoX = 150;
+			var moveBarra=1;
+			var teste = 1;
+			var rodando = true;
+			
+			var yBarra = Math.floor((Math.random() * 100) + 400);
+			var xBarra = Math.floor((Math.random() * 260) + 60);
+			
+				addEventListener("keydown", teclaPressionada);
+				addEventListener("keyup", teclaSolta);
+			
+			setInterval(desenhar, 1000/fps);
+			function desenhar(){
+
+				vx = vx + ax*dt;
+				x = x + vx*dt;
+
+				//ay = (alvoY-y)/2  - vy/2;
+				vy = vy + ay*dt+g*dt;
+				y = y + vy*dt;
+				
+				if(xBarra-moveBarra == 0 ){
+					moveBarra=moveBarra*(-1);
+				}else if(xBarra-moveBarra == 350){
+					moveBarra=moveBarra*(-1);
+				}
+				xBarra = xBarra-moveBarra;
+				
+				
+				if(y > yBarra - 29 && (x > xBarra-20 && x < xBarra+50) && vy <89 && fuel.value>0){
+										
+					if(teste==1){
+						alert("Victory");
+						teste=2;
+						var r = confirm("Jogar de novo?");
+						if (r == true) {
+							location.reload();
+							
+						} else {
+							g=0;
+							y=yBarra-30;
+							x=100;
+							vy = 0;
+							ay = 0;
+							vx = 0;
+							ax = 0;
+							moveBarra = 0;
+							rodando=false;
+						}
+					}
+				}else if(y > yBarra-20 || fuel.value == 0){
+					estatico=vy;
+					vy = 0;
+					if(teste==1){
+						alert("FAIL!");
+						teste=2;
+						var r = confirm("Jogar de novo?");
+						if (r == true) {
+							location.reload();
+						} else {
+							g=0;
+							y=yBarra-30;
+							x=100;
+							vy = 0;
+							ay = 0;
+							vx = 0;
+							ax = 0;
+							moveBarra = 0;
+							rodando=false;
+						}
+					}
+				}
+
+				ctx.clearRect(0,0, 400, 600);	
+				ctx.beginPath();
+
+				ctx.fillStyle = "rgb(0, 0, 0)";
+				ctx.fillRect(xBarra,yBarra,50,10);
+				ctx.stroke();
+
+				ctx.strokeStyle = "black";
+				ctx.fillStyle = "rgb(250, 150, 150)";
+				ctx.beginPath();
+				ctx.moveTo(x, 30+y);
+				ctx.lineTo(20+x, 30+y);
+				ctx.lineTo(10+x,    y);
+				ctx.closePath();
+ctx.beginPath();
+							ctx.fillStyle = "white";
+							ctx.strokeStyle="red";
+							ctx.rect(70,10,100,10);
+							ctx.stroke();
+							ctx.beginPath();
+							ctx.fillStyle = "red";
+							ctx.strokeStyle="blue";
+							ctx.rect(70,10,fuel.value,10);
+							ctx.stroke();
+							
+
+				ctx.fill();
+				ctx.stroke();
+				var atual = vy;
+				if( atual%10 ==0){
+					estatico = atual;
+				}
+				ctx.font = "20px Georgia";
+				ctx.fillText("Fuel: ", 10, 20);
+				ctx.font = "20px Georgia";
+				ctx.fillText("Velocidade Máxima 90", 10, 50);
+				ctx.fillText("Vel: "+estatico, 10, 80);
+				
+				ctx.drawImage(img,this.x-5,this.y,30,36);
+
+
+				fuel.value = fuel.value-0.05;
+			}
+			
+
+			function teclaPressionada(e){
+				if(rodando){
+					console.log("Tecla: "+e.keyCode);
+					if(e.keyCode==39){
+						
+						if(fuel.value > 0){
+							ax = 60;
+							fuel.value = fuel.value-2;
+						}
+					}else if(e.keyCode==37){
+						ax = -60;
+						if(fuel.value > 0){
+							ax = -60;
+							fuel.value = fuel.value-2;
+						}
+					}/*
+					if(e.keyCode==40){
+						if(fuel.value > 0){
+							ay = 30;
+							fuel.value = fuel.value-5;
+						}
+
+					}*/else if(e.keyCode==38){
+						if(fuel.value > 0){
+							vy = -60;
+							fuel.value = fuel.value-5;
+						}
+					}
+					if(e.keyCode==32){
+						if(fuel.value > 0){
+							vy = -60;
+							fuel.value = fuel.value-5;
+						}
+					}
+				}
+			}
+			function teclaSolta(e){
+				if(rodando){
+					console.log("Tecla: "+e.keyCode);
+					if(e.keyCode==39){
+						ax = 0;
+						disparadorDeAtrito();
+					}else if(e.keyCode==37){
+						ax = 0;
+						disparadorDeAtrito();
+					}
+					if(e.keyCode==40){
+						ay = 0;
+					}else if(e.keyCode==38){
+						ay = 0;
+					}
+				}
+			}
+			function disparadorDeAtrito(){
+				setInterval(atritoDoAr, 1500);
+				console.log("ATRITO");
+				
+			}
+			function atritoDoAr(){
+				if(vx > 0){
+					vx= vx - 1;
+					disparadorDeAtrito();
+				}else if(vx < 0){
+					vx = vx + 1;
+					disparadorDeAtrito();
+				}
+			
+			}
+		</script>
+	</body>
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+
+

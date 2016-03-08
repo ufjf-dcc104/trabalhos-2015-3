@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Exemplo Animaçao com Controle</title>
+	</head>
+	<body>
+		<h1>Exemplo Animaçao com Controle</h1>
+		<canvas width="400" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+		<script>
+                function BancoDeImagens(){
+                    this.imagens = {};
+                    this.add = function(nome,url){
+                        this.imagens[nome] = new Image();
+                        this.imagens[nome].src = url;
+                    };
+                    this.desenhaXY = function(ctx,nome,x,y){
+                      ctx.drawImage(this.imagens[nome],x,y);  
+                    };
+                    this.desenhaCompleto = function(ctx,nome,x,y,w,h,dx,dy,dw,dh){
+                      ctx.drawImage(this.imagens[nome],x,y,w,h,dx,dy,dw,dh);  
+                    };
+                        
+                };
+                var imagens = new BancoDeImagens();
+                imagens.add("ship","nave.png");
+                imagens.add("ship2","spritesheet.png");
+                    
+                var img = new Image();
+                img.src = "nave.png";
+                    
+		var teclado = {
+			esquerda: false,
+			direita: false,
+			cima: false,
+			baixo: false
+		};
+		teclado.teclaPressionada = function(e){
+				switch (e.keyCode){
+					case 37: 
+						teclado.esquerda = true;
+					break;
+					case 38: 
+						teclado.cima = true;
+					break;
+					case 39: 
+						teclado.direita = true;
+					break;
+					case 40: 
+						teclado.baixo = true;
+					break;
+				}
+			};
+			teclado.teclaSolta = function(e){
+				switch (e.keyCode){
+					case 37: 
+						teclado.esquerda = false;
+					break;
+					case 38: 
+						teclado.cima = false;
+					break;
+					case 39: 
+						teclado.direita = false;
+					break;
+					case 40: 
+						teclado.baixo = false;
+					break;
+				};
+			};
+
+
+		
+			function Sprite(){
+				this.x = 130;
+				this.y = 130;
+				this.vx = 0;
+				this.vy = 0;
+				this.ax = 0;
+				this.ay = 0;
+				this.w = 30;
+				this.h = 40;
+				this.mover = function(dt, g){
+					this.ax -= 0.1*(this.vx);
+					this.vx = this.vx + this.ax*dt;
+					this.x = this.x + this.vx*dt;
+					
+					this.ay -= 0.1*(this.vy);
+					this.vy = this.vy + this.ay*dt+g*dt;
+					this.y = this.y + this.vy*dt;
+				};
+				this.desenhar = function(ctx){
+					ctx.strokeStyle = "black";
+					ctx.fillStyle = "rgb(250, 150, 150)";
+					ctx.beginPath();
+					ctx.moveTo(this.x, 30+this.y);
+					ctx.lineTo(20+this.x, 30+this.y);
+					ctx.lineTo(10+this.x,    this.y);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+				};
+				this.controlar = function(){
+
+				};
+                                
+                                this.colidiuCom = function(alvo){
+                                    if(this.x > alvo.x+alvo.w) return false;
+                                    if(this.x+this.w < alvo.x) return false;
+                                    if(this.y > alvo.y+alvo.h) return false;
+                                    if(this.y + this.h < alvo.y) return false;
+                                    return true;
+                                };
+			}
+
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+
+			var fps = 60;
+			var g = 60;
+			var dt = 1/fps;
+
+			var nave = new Sprite();
+			nave.controlar = function(t){
+
+				if(teclado.direita){
+				 	this.ax = 15*g;
+				}else if(teclado.esquerda) {
+					this.ax = -15*g;
+				}else{
+					this.ax = 0;
+				}
+				if(teclado.cima) {
+					this.ay = -15*g;
+				}else if(teclado.baixo) {
+					this.ay = 15*g;
+				}else{
+					this.ay = 0;
+				}
+			};
+                        nave.desenhar = function(ctx){
+                            imagens.desenhaXY(ctx,"ship",this.x-10,this.y-10);
+                        }
+
+			var inimigo1 = new Sprite();
+			inimigo1.x = 200;
+			inimigo1.y = 0;
+                        inimigo1.desenhar = function(){
+                            imagens.desenhaCompleto(ctx,"ship2",32,160,32,32,this.x-10,this.y-10,30,30);
+                        }
+			inimigo1.controlar = function(){
+				this.ax = 1*(nave.x - this.x);
+				this.ay = 1*(nave.y - this.y);
+			};
+
+			addEventListener("keydown", teclado.teclaPressionada);
+			addEventListener("keyup", teclado.teclaSolta);
+
+			setInterval(passo, 1000/fps);
+			function passo(){
+				nave.controlar();
+				inimigo1.controlar();
+
+				nave.mover(dt, g);
+				inimigo1.mover(dt, 0);
+
+				if(nave.y > 150){
+					nave.y = 150;
+					nave.vy = 0;
+				}
+                                
+                                if(nave.colidiuCom(inimigo1)){
+                                    inimigo1.vy = 0;
+                                    inimigo1.x = 200;
+                                    inimigo1.y = -100;
+                                }
+
+				ctx.clearRect(0,0, 400, 300);	
+
+				nave.desenhar(ctx);
+				inimigo1.desenhar(ctx);
+                                
+                                
+			}
+
+		</script>
+	</body>
+</html> 
+
+
+
+
+
+
+
+
+
+
+
+

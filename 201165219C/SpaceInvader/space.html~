@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Space Invader</title>
+		<script src="imagens.js"></script>
+		<script src="sprite.js"></script>
+		<script src="tiro.js"></script>
+	</head>
+	<body>
+		<h1>Space Invader</h1>
+		<canvas width="800" height="500">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+	<script>	
+		// Criando as imagens	
+		var imagens = new BancoDeImagens();
+		imagens.add("sheet","./spaceshipset32x32/preview_16.png");
+		imagens.add("nave","./spaceshipset32x32/nave.png");
+		imagens.add("alien1","./spaceshipset32x32/alien1.png");
+		imagens.add("alien2","./spaceshipset32x32/alien2.png");
+		imagens.add("alien3","./spaceshipset32x32/alien3.png");
+		
+		// Controlando os eventos do teclado
+		var teclado = {
+			esquerda: false,
+			direita: false,
+			cima: false,
+			baixo: false,
+			atira: false
+		};
+		teclado.teclaPressionada = function(e){
+				console.log("Tecla: "+e.keyCode)
+				switch (e.keyCode){
+					case 37: 
+						teclado.esquerda = true;
+						break;
+					case 38: 
+						teclado.cima = true;
+						break;
+					case 39: 
+						teclado.direita = true;
+						break;
+					case 40: 
+						teclado.baixo = true;
+						break;
+					case 32:
+						teclado.atira = true;
+						break;
+				}
+			};
+			teclado.teclaSolta = function(e){
+				switch (e.keyCode){
+					case 37: 
+						teclado.esquerda = false;
+						break;
+					case 38: 
+						teclado.cima = false;
+						break;
+					case 39: 
+						teclado.direita = false;
+						break;
+					case 40: 
+						teclado.baixo = false;
+						break;
+					case 32: 
+						teclado.atira = false;
+						break;			
+				}
+			};
+
+			// Criando os elementos que aparecem na tela ...
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			var fps = 60;
+			var g = 60;
+			var dt = 1/fps;
+			var cont = 0;				// Variável para realizar o movimento dos inimigos
+			var winner = 1;				// Variável para controlar a vitória do jogo
+			// Criando a nave do jogador
+			var nave = new Sprite();	
+			nave.controlar = function(){
+				if(teclado.direita){
+				 	this.ax = 200;
+				}else if(teclado.esquerda) {
+					this.ax = -200;
+				}else{
+					this.ax = 0;
+				}
+				if(teclado.cima) {
+					this.ay = -2*g;
+				}else if(teclado.baixo) {
+					this.ay = 30;
+				}else{
+					this.ay = 0;
+				}
+				if (teclado.atira) {
+					this.cont++;
+					if (this.cont > 7)
+					{
+						this.tiro = true;
+						this.cont = 0;
+					}
+				}
+			};
+			nave.desenhar = function (ctx,dt, inimigos) {
+				imagens.desenhaXY(ctx,"nave",this.x,this.y);
+				//imagens.desenha(ctx,"sheet",0,158,32,32,this.x-4,this.y-4,40,40);
+
+				// Se estivermos atirando criamos um novo objeto do tipo Tiro
+				if (this.tiro)
+				{
+					var t = new Tiro(this.x,this.y);
+					this.tiros.push(t);
+					this.tiro = false;
+				}
+				// Desenhamos todos os tiros
+				for (var i = 0; i < this.tiros.length; i++)
+				{
+					this.tiros[i].y -= this.tiros[i].vy*dt; 
+					ctx.beginPath();
+					ctx.strokeStyle = "red";
+					ctx.fillStyle = "red";
+					ctx.rect(this.tiros[i].x+12,this.tiros[i].y-10,2,15);
+					ctx.closePath();
+					ctx.fill();
+					ctx.stroke();
+					// Se o tiro passar da área do jogo eliminamos ele da lista de tiros
+					if (this.tiros[i].y < 0)
+						this.tiros.splice(i,1);
+					// Senão checamos se ele colidiu com um inimigo
+					else {
+						for (var j = 0; j < inimigos.length; j++) {
+							if (this.tiros[i].y-40 <= inimigos[j].y+10 && this.tiros[i].y-40 >= inimigos[j].y-10 && this.tiros[i].x >= inimigos[j].x-10 && this.tiros[i].x <= inimigos[j].x+10)
+							{
+								this.tiros.splice(i,1);
+								inimigos.splice(j,1);
+							}
+						}
+					}
+				}
+			};
+			// Criamos os inimigos
+			var inimigos = [];
+			for (var i = 0; i < 5; i++)
+			{
+				var enemy = new Sprite();
+				enemy.controlar = function(cont,dt){
+					this.ax = Math.cos(2*cont*dt)*200;
+				};
+				enemy.desenhar = function (ctx) {
+					//imagens.desenhaXY(ctx,"ship",this.x,this.y);
+					switch (this.tipo)
+					{
+						case 0: imagens.desenhaXY(ctx,"alien1",this.x,this.y);
+							break;
+						case 1: imagens.desenhaXY(ctx,"alien2",this.x,this.y);
+							break;
+						case 2: imagens.desenhaXY(ctx,"alien3",this.x,this.y);
+							break;
+					}
+					//imagens.desenha(ctx,"sheet",35,158,32,32,this.x-4,this.y-4,40,40);
+				};
+				enemy.x = (i+1)*100;
+				enemy.y = 0;
+				// Sorteia qual o tipo de inimigo
+				enemy.tipo = Math.round((Math.random()*100)) % 3;
+				inimigos.push(enemy);
+			}
+			// Adicionamos os eventos	
+			addEventListener("keydown", teclado.teclaPressionada);
+			addEventListener("keyup", teclado.teclaSolta);
+			setInterval(passo, 1000/fps);
+			// Setamos a função de passo
+			function passo(){
+				cont++;
+				nave.controlar();
+				for (var i = 0; i < inimigos.length; i++)
+					inimigos[i].controlar(cont,dt);
+				nave.mover(dt, g);
+				for (var i = 0; i < inimigos.length; i++)
+					inimigos[i].mover(dt,10);
+				if(nave.y > 400){
+					nave.y = 400;
+					nave.vy = 0;
+				}
+				if (nave.x > 770)
+					nave.x = 770;
+				if (nave.x < 20)
+					nave.x = 20;
+				ctx.clearRect(0,0,800,500);
+				ctx.fillStyle = "black";
+				ctx.fillRect(0,0,800,500);	
+				nave.desenhar(ctx,dt,inimigos);
+				for (var i = 0; i < inimigos.length; i++)
+				{
+					console.log(inimigos.length);
+					inimigos[i].desenhar(ctx);
+					// Checar se o inimigo chegou no fim da tela
+					if (inimigos[i].y > 400 || (inimigos[i].y+1 <= nave.y && inimigos[i].y-1 >= nave.y))
+					{
+						winner = 0;
+						inimigos.splice(i,1);
+					}
+				}
+				ctx.font = "20px Arial";
+				ctx.fillStyle = "white";
+				ctx.fillText("Enemy = "+inimigos.length,700,50);
+				if (inimigos.length == 0 && winner)
+				{
+					console.log("VITORIA !!!");
+					ctx.clearRect(0,0,800,500);
+					ctx.font = "60px Arial";
+					ctx.fillStyle = "yellow";
+					ctx.fillText("VITORIA !!!",400,200);
+					ctx.strokeStyle = "darkyellow";
+					ctx.lineWidth = 2;
+					ctx.strokeText("VITORIA !!!",400,200);
+				}
+				else if (!winner)
+				{
+					console.log("DERROTA !!!");
+					ctx.clearRect(0,0,800,500);
+					ctx.font = "60px Arial";
+					ctx.fillStyle = "red";
+					ctx.fillText("SEU PERDEDOR !!!",200,200);
+					ctx.strokeStyle = "darkred";
+					ctx.lineWidth = 2;
+					ctx.strokeText("SEU PERDEDOR !!!",200,200);
+				}	
+			}
+		</script>
+	</body>
+</html> 

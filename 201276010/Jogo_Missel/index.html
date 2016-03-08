@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Manipulação de Eixos</title>
+		<script src="Sprite.js"></script>
+	</head>
+	<body>
+		<h1>Manipulação de Eixos</h1>
+		<canvas width="400" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	
+
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+
+	var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+
+	var pc = new Sprite();
+	pc.desenharAliado(ctx);
+	pc.tiro = false;
+	pc.intervaloTiro = 0;
+        var pontuacao = 0;
+        var taxaPontuacao = 12;
+        var quantidadePredios = 8;
+        
+        
+        var inimigo = new Sprite();
+        inimigo.x = 100;
+	inimigo.y = 5;
+        inimigo.angulo = 7.87;
+        inimigo.velocidade = 100;
+	inimigo.desenharNave(ctx,"ship2",32,160);
+
+
+	var tiros = [];
+        var predio1 = new Predio(8,250, 30,40);
+        var predio2 = new Predio(45,250, 30,40);
+        var predio3 = new Predio(84,250, 30,40);
+        var predio4 = new Predio(121,250, 30,40);
+        var predio5 = new Predio(230,250, 30,40);
+        var predio6 = new Predio(267,250, 30,40);
+        var predio7 = new Predio(307,250, 30,40);
+        var predio8 = new Predio(350,250, 30,40);
+
+	addEventListener("keydown", function(e){
+		if(e.keyCode==37){
+			pc.va = -5;
+		}
+		if(e.keyCode==39){
+			pc.va = 5;
+		}
+		if(e.keyCode==38){
+			//pc.velocidade = 80;
+		}
+		if(e.keyCode==32){
+			pc.tiro = true;
+		}
+	});
+	addEventListener("keyup", function(e){
+		if(e.keyCode==37){
+			pc.va = 0;
+		}
+		if(e.keyCode==39){
+			pc.va = 0;
+		}
+		if(e.keyCode==38){
+			pc.velocidade = 0;
+		}
+		if(e.keyCode==32){
+			pc.tiro = false;
+		}
+	});
+
+	setInterval(passo, 1000/fps);
+	function passo(){
+            
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, tela.width, tela.height);	
+		pc.mover(dt,0);
+                inimigo.mover(dt,0);
+		if(pc.tiro && pc.intervaloTiro<=0){
+
+			var tiro = new Sprite();
+			tiro.w = 10;
+			tiro.h = 10;
+			tiro.velocidade = 500;
+			tiro.angulo = pc.angulo;
+			tiro.x = pc.x - 10;
+			tiro.y = pc.y ;
+			var tiro2 = new Sprite();
+			tiro2.w = 10;
+			tiro2.h = 10;
+			tiro2.velocidade = 500;
+			tiro2.angulo = pc.angulo;
+			tiro2.x = pc.x + 10;
+			tiro2.y = pc.y ;
+			
+			tiros.push(tiro);
+			tiros.push(tiro2);
+			pc.intervaloTiro = 1/5; // 5 tiros por segundo
+		}
+		pc.intervaloTiro -= 1*dt;
+		tiros.forEach(function(t){
+			t.mover(dt,0);	
+			t.desenharTiro(ctx);
+			if(t.y<0 || t.y > tela.height || t.x<0 || t.x> tela.width){
+				tiros.splice(tiros.indexOf(t), 1);
+			}
+                        if(t.colidiuCom(inimigo)){
+                            reiniciarInimigo();
+                            pontuacao+=taxaPontuacao;
+			   inimigo.velocidade = inimigo.velocidade + taxaPontuacao;
+                        }
+                            
+		});
+                
+                if(inimigo.y>310)
+                    reiniciarInimigo();
+                
+                if(predio1.colidiuCom(inimigo)){
+                    predio1.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+
+               	if(predio2.colidiuCom(inimigo)){
+                    predio2.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+		if(predio3.colidiuCom(inimigo)){
+                    predio3.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+		if(predio4.colidiuCom(inimigo)){
+                    predio4.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+		if(predio5.colidiuCom(inimigo)){
+                    predio5.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+
+		if(predio6.colidiuCom(inimigo)){
+                    predio6.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+
+		if(predio7.colidiuCom(inimigo)){
+                    predio7.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+
+		if(predio8.colidiuCom(inimigo)){
+                    predio8.apagar();
+                    reiniciarInimigo();
+			diminuirQuantidade();
+                }
+
+                
+                predio1.desenhar(ctx);
+                predio2.desenhar(ctx);
+                predio3.desenhar(ctx);
+                predio4.desenhar(ctx);
+                predio5.desenhar(ctx);
+                predio6.desenhar(ctx);
+                predio7.desenhar(ctx);
+                predio8.desenhar(ctx);
+                inimigo.desenharNave(ctx,"ship2",32,160);
+		pc.desenharAliado(ctx);
+                
+                function reiniciarInimigo(){
+                    inimigo.y = 0;
+		    inimigo.x = 50;
+
+                    inimigo.x = 50+Math.random()*350;
+                    
+                }
+
+		function diminuirQuantidade(){
+			quantidadePredios--;
+		}
+                if(quantidadePredios==0){
+                       if(confirm("Você perdeu. Pontuação: "+pontuacao)){
+                            pontuacao = 0;
+                            quantidadePredios = 8;
+			    inimigo.velocidade = 100;
+                            predio1 = new Predio(8,250, 30,40);
+                            predio2 = new Predio(45,250, 30,40);
+                            predio3 = new Predio(84,250, 30,40);
+                            predio4 = new Predio(121,250, 30,40);
+                            predio5 = new Predio(230,250, 30,40);
+                            predio6 = new Predio(267,250, 30,40);
+                            predio7 = new Predio(307,250, 30,40);
+                            predio8 = new Predio(350,250, 30,40);
+                       }
+                }
+                ctx.fillStyle = "white";
+                ctx.font ="15px Georgia";
+                ctx.fillText("Pontuação: "+pontuacao,30,30);
+                
+	}
+
+</script>
+</html>

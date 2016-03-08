@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Flappy</title>
+		<script src="engine.js"></script>
+	</head>
+	<body>
+		<h1>Jogo - Flappy</h1>
+		<canvas width="500" height="400">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+		<div>
+		<h3>Instruções</h3>
+		<ul>
+			<li>Controle o flappy com a barra de espaços;</li>
+			<li>Se perder uma vida, recomeçe apertando Enter;</li>
+			<li>Passe pelos buracos das colunas e ganhe pontos.</li>
+		</ul>
+		</div>
+
+		<script>
+
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+
+			var fps=60;//nro de frames
+			var dt=1/fps;//delta T (variação de tempo= 1s/fps)
+			var g=10;//aceleração da gravidade
+			var vento=0;//influencia do vento
+			var pontos=0;
+			var vidas=3;
+			var pause=false;//controlar a parada do jogo
+			var gameOver= false;//indicador de fim de jogo
+			
+				
+			var teclas= {
+				'esq': false,
+				'cima': false,
+				'dir': false,
+				'baixo': false,
+				'espaco': false,
+				'enter': false
+			};
+			
+			var flappy= new Sprite();
+			flappy.width=25;
+			flappy.height= 25;
+			flappy.fillStyle="yellow";
+			flappy.x= 30;
+			flappy.y= tela.height/2-flappy.height/2;
+			flappy.angulo= 0.75*Math.PI;
+			flappy.vy=20;
+			
+			
+			flappy.controlar= function(tela){
+			
+				ctx.save();
+				
+				
+				ctx.translate(this.x,this.y);//desloca a origem do contexo
+											//(no centro de gravidade do sprite)
+				
+				//verifica se os limites do canvas foram atingidos pelo objeto
+				var limiteCima= (this.y-this.height/2<=0);
+				var limiteBaixo= (this.y+this.height/2>=tela.height);
+				
+				if(limiteCima){
+					this.y=this.height/2;
+					this.ay=0; this.vy=0;
+				}
+				if(limiteBaixo){
+					//vento=0;
+					this.y=tela.height-this.height/2;
+					this.ay=0; this.vy=0;
+					
+					if(!pause){
+						vidas--;
+					}
+					pause= true;//se atingir o fundo, perde vidas e pausa o jogo
+					
+				}
+				
+				ctx.restore();
+			};//fim controlar
+			
+			flappy.teclado= function(teclas){
+				if(pause) return;//o pause controla a ativação do teclado
+				if(teclas['espaco']){
+					this.ay= -90;
+					this.angulo= 0.25*Math.PI;
+				}else if(!teclas['espaco']){
+					this.ay= 90;
+				}
+				
+			};
+			
+			var obstaculos= [];
+			
+			function criarObstaculos(){
+				if(obstaculos.length==10 || pause) return;
+				var ob= new Obstaculo();
+				//largura randomica do obstaculo, indo de 20 a 50
+				ob.width= Math.floor((Math.random() * 60)+20);
+				ob.x= tela.width+ob.width/2;
+				//tamanho do gap
+				ob.gapSize= 3*flappy.height;
+				//posição randomica para o inicio do gap
+				ob.gapBegin= Math.floor((Math.random() * (tela.height*0.6-flappy.height/2))+flappy.height/2);
+				//vel. de deslocamento do obstaculo
+				ob.vx=-60;
+				
+				//função de colisão do obstaculo com o flappy
+				ob.colidiuCom= function(flappy, saveSize){
+					
+					//colisão no eixo X
+					//posição da frente do obstáculo em relação ao "bico" do flappy
+					var x1= (this.x-this.width/2)-(flappy.x+flappy.width/2);
+					//posição da "traseira" do obstáculo em relação ao "bico" do flappy
+					var x2= (this.x+this.width/2)-(flappy.x+flappy.width/2);
+					//****o flappy está cruzando o obstáculo se x1<=0 e x2>=0***
+					
+					//colisão no eixo Y
+					//a varíavel dentroGap armazena um lógico informando se o flappy está no espaço do gap
+					var dentroGap=	(flappy.y-flappy.height/2>this.gapBegin)
+									&&(flappy.y+flappy.height/2<this.gapBegin+this.gapSize);
+					
+					//console.log(dentroGap);
+					if((x1<=0 && x2>=0)&& (!dentroGap)){//colidiu!
+						flappy.vx=0; flappy.vy=0; flappy.ay=0;
+						if(!pause) vidas--;
+						pause=true;
+					}
+					
+					if(x2<0){//passou pelo obstáculo
+						if(this.ativo){
+							pontos+=1;
+							this.ativo=false;
+						}
+					}
+					
+				};//fim da função de colisão
+				
+				obstaculos.push(ob);//add o obstaculo na lista de obstáculos
+			}//fim da função criar obstáculos
+			
+			
+			function reiniciar(){
+				if(vidas==0) return;
+				flappy.x= 30;
+				flappy.y= tela.height/2-flappy.height/2;
+				flappy.angulo= 0.75*Math.PI;
+				flappy.vy=20;
+				
+				obstaculos= [];
+				
+				pause= false;
+			};
+			
+			
+			window.setInterval(passo, 1000/fps);
+			
+			window.addEventListener("keydown", function(e){
+				var key = e.keyCode;
+				//console.log(key);
+				switch(key){
+					case 37: teclas['esq']=true;
+					break;
+					case 38: teclas['cima']=true;
+					break;
+					case 39: teclas['dir']=true;
+					break;
+					case 40: teclas['baixo']=true;
+					break;
+					case 32: teclas['espaco']= true;
+					break;
+					case 13: teclas['enter']= true;
+							 if(!pause) return;
+							 reiniciar();
+					break;
+				}
+				
+				flappy.teclado(teclas);
+				
+			});//fim keydown
+			
+			window.addEventListener("keyup", function(e){
+				var key = e.keyCode;
+				//console.log(key);
+				switch(key){
+					case 37: teclas['esq']=false;
+					break;
+					case 38: teclas['cima']=false;
+					break;
+					case 39: teclas['dir']=false;
+					break;
+					case 40: teclas['baixo']=false;
+					break;
+					case 32: teclas['espaco']= false;
+					break;
+					case 13: teclas['enter']= false;
+					break;
+				}
+				
+				flappy.teclado(teclas);
+				
+			});//fim keyup
+	
+			var infoLabel= new InfoLabel(tela);
+			
+			var contador= 1;
+			function passo(){
+			
+				ctx.fillStyle= "black";
+				ctx.fillRect(0,0,tela.width,tela.height);
+					
+				//console.log(flappy.ay, flappy.angulo);
+				
+				if(contador%180==0) criarObstaculos();
+				
+				obstaculos.forEach(function(ob){
+					if(!pause) ob.mover(dt);
+					ob.colidiuCom(flappy,5);
+					ob.desenhar(ctx, tela);
+					if(ob.x<0-ob.width/2) obstaculos.splice(obstaculos.indexOf(ob),1);
+				});//fim forEach
+				
+				flappy.mover(dt,g);
+				flappy.controlar(tela);
+				flappy.desenhar(ctx);
+				
+				infoLabel.desenhar(ctx,vidas, pontos, gameOver)
+				
+				contador++;
+			}//fim passo
+
+		</script>
+	</body>
+</html>

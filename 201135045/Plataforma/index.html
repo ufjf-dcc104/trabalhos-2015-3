@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Donkey Kong Bananas</title>
+		<!-- Folha de estilos -->
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<!-- Scripts -->
+		<script type="text/javascript" src="js/util.js"></script>
+		<script type="text/javascript" src="js/animation.js"></script>
+		<script type="text/javascript" src="js/sprites/sprite.js"></script>
+		<script type="text/javascript" src="js/sprites/player.js"></script>
+		<script type="text/javascript" src="js/sprites/enemy.js"></script>
+		<script type="text/javascript" src="js/sprites/things.js"></script>
+		<script type="text/javascript" src="js/spawn.js"></script>
+	</head>
+	<body onload="start()">
+		<div id="container">
+			<h1>Donkey Kong Bananas</h1>
+			<canvas id="game" width="912" height="480">
+				Seu navegador nao tem suporte ao canvas!
+			</canvas>
+			<br><p>&nbsp;</p>
+		</div>
+		
+		<script>
+						
+			function start() {
+				// adiciona os sprite sheets na base
+				sheets.add("dk", "./img/dk.png");
+				sheets.add("enemys", "./img/enemys.png");
+				sheets.add("things", "./img/objects.png");
+
+				// cria contexto
+				var canvas = document.getElementById("game");
+				var ctx = canvas.getContext("2d");
+				var timerid;
+				
+				var score = 0;
+				var text = new Text();
+				
+				const foreground = new Image();
+				foreground.src = "./img/foreground.png";
+				
+				WIDTH = canvas.offsetWidth;		Object.freeze(WIDTH);
+				HEIGHT = canvas.offsetHeight;	Object.freeze(HEIGHT);
+				
+				// cria mapa da tela e preenche as linhas que formam o chão
+				var map = new Map(WIDTH, HEIGHT);
+				map.fillRow(HEIGHT/DGRID-1); map.fillRow(HEIGHT/DGRID-2);
+				var boxes = null;
+				
+				// Jogador
+				var dk = new Player( {x: WIDTH/2, y: HEIGHT/2}, 
+									 {w: 3 * DGRID, h: 5 * DGRID},
+									 {w: 16, h: 72}
+								);
+				
+				// Inimigos
+				var enemies = createEnemies(WIDTH, HEIGHT/2);
+				setInterval((function(self) {
+					return function() { 
+						var k = Math.floor(Math.random() * self.length);
+						self[k].appear = true;
+					}
+				})(enemies), 5000);
+				
+				// Bananas, Plataformas, Efeitos, etc...
+				var smoke = new Things( {x: 0, y: 0}, {w: 3 * DGRID, h: 3 * DGRID} );
+				smoke.animation.createAnimation("expand", "things", 8, 3 * DGRID, 3 * DGRID, 0 * DGRID, 4 * DGRID, 1.0);
+				smoke.animation.addEventTo("expand", function(self) { self.appear = false; }, smoke);
+				
+				var plataforma = new Things({x: WIDTH/2, y: HEIGHT/2}, {w: 3 * DGRID, h: 2 * DGRID});
+				plataforma.draw = function(ctx, map) {
+					ctx.save();
+						ctx.translate(this.r.x, this.r.y);
+						ctx.save();
+							ctx.scale(this.s.x, this.s.y);
+							ctx.drawImage(sheets.get("things"),
+									0 * 16, 15 * 16, 3 * 16, 2 * 16, 
+									-1.5 * 16, -1 * 16, 3 * 16, 2 * 16);
+						ctx.restore();
+					ctx.restore();
+				}
+				//map.fillArea({x: Math.floor(plataforma.r.x/16), y: Math.floor(plataforma.r.y/16), w: 6, h: 1});
+				
+				var bananas = new BananaSpawn(createThings(WIDTH/2, HEIGHT/2)[0], map);
+				
+				// main loop
+				var loop = function() {
+					ctx.clearRect(0, 0, WIDTH, HEIGHT);
+					// Atualiza posição e estados
+					enemies.forEach(function(enemy) {
+						if(enemy.appear)
+							enemy.move(DT, G, map);
+					});
+
+					dk.move(DT, G, map);
+					
+					// Verifica colisão
+					enemies.forEach(function(enemy) {
+						if(enemy.appear) {
+							if(dk.colidiu(enemy, map)) {
+								var vr = {x: Math.abs(dk.r.x - enemy.r.x), y: dk.r.y - enemy.r.y};
+								var theta = Math.acos(vr.x / Math.sqrt(vr.x * vr.x + vr.y * vr.y)) * (180.0/Math.PI);
+								if(60 < theta && theta < 120) {
+									// colidiu em cima
+									dk.v.y = -Math.sqrt(Math.abs(G) * dk.hmax);
+									dk.animation.resetTo("jumping");
+									
+									smoke.r = {x: enemy.r.x, y: enemy.r.y};
+									smoke.appear = true;
+									smoke.animation.resetTo("expand");
+									smoke.animation.executeAnimation("expand");
+									
+									enemy.appear = false;
+									enemy.r.x = enemy.sz.w/2;
+								} else {
+									// colidiu na lateral
+									dk.r.y = 0;
+									dk.v.y = 0;
+									score = 0;
+								}
+							}
+						}
+					});
+					
+					//plataforma.draw(ctx);
+					
+					bananas.spawn(function(banana){
+						if(dk.colidiu(banana, map)) {
+							score++;
+							return true;
+						} else banana.draw(ctx, boxes);
+						return false;
+					}, DT, 0.05 * G, 2000);
+								
+					
+					// Desenha
+					//map.draw(ctx);
+					enemies.forEach(function(enemy) {
+						if(enemy.appear)
+							enemy.draw(ctx, boxes);
+					});
+
+					dk.draw(ctx, boxes);
+					if(smoke.appear) smoke.draw(ctx, boxes);
+					
+					text.raster(ctx, "Bananas: " + score, 0.80 * WIDTH, DGRID + 2);
+					
+					// SEMPRE EM ULTIMO
+					ctx.drawImage(foreground, 0, 0 , WIDTH, HEIGHT);
+				}
+				timerid = setInterval(loop, 1000/FPS);
+				
+				var down = false;
+				/*
+				*	Listeners de teclado para tratamento de eventos
+				*		'A' ou '←' Caminha para esquerda
+				*		'D' ou '→' Caminha para direita
+				*		' ' ou '↑' Salta
+				*/				
+				addEventListener("keydown", function(e){
+					if(e.keyCode == 37 || e.keyCode == 65){
+						dk.walkToLeft = true;
+					} else if(e.keyCode == 39 || e.keyCode == 68){
+						dk.walkToRight = true;
+					} else if(e.keyCode == 38 || e.keyCode == 32){
+						if(!down) {
+							down = true;
+							dk.jump = true;
+						}
+					}
+				});
+				addEventListener("keyup", function(e){
+					if(e.keyCode == 37 || e.keyCode == 65){
+						dk.walkToLeft = false;
+					} else if(e.keyCode == 39 || e.keyCode == 68) {
+						dk.walkToRight = false;
+					} else if(e.keyCode == 38 || e.keyCode == 32) {
+						dk.jump = false;
+						down = false;
+					}					
+				});
+			}
+			
+			function reset(timerid) {
+				clearInterval(timerid);
+				start();
+			}
+			
+		</script>
+		
+	</body>
+</html> 

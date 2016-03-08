@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Plataforma</title>
+		<audio autoplay loop>
+		<source src="sons/music.mp3">
+		</audio>
+
+		<script src="Sprite.js"></script>
+		<script src="Tiro.js"></script>
+		<script src="Escudo.js"></script>
+		<script src="SoundLib.js"></script>
+		<style type="text/css" media="screen"></style>
+	</head>
+	<body>
+		<canvas width="1200" height="600">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	// constantes
+
+	var MAX_VIDA = 300;
+	var MAX_MANA = 300;
+
+
+	// variáveis
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	var mapa = [];
+	var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+	var player = new Sprite();
+	var inimigo = new Sprite();
+	var bonus = new Sprite();
+
+	//carregando todas as imagens
+	var imagens = new BancoDeImagens();
+	imagens.add("player", "imagens/mageattack.png");
+	imagens.add("inimigo", "imagens/orc spritesheet calciumtrice.png");
+	imagens.add("terreno", "imagens/Jungle_terrain.png");
+	imagens.add("shieldFire", "imagens/shield_fire.png");
+	imagens.add("shieldMagic", "imagens/shield_magic.png");
+	imagens.add("shieldMagicInverted","imagens/shield_magic_inverted.png");
+	imagens.add("shieldFireInverted","imagens/shield_fire_inverted.png");
+	imagens.add("magicHit", "imagens/magic.png");
+	imagens.add("fireHit", "imagens/fire.png");
+	imagens.add("bonus", "imagens/bonus.png");
+	imagens.add("fundo", "imagens/exterior.jpg");
+	imagens.add("escada","imagens/escada.png");
+	imagens.add("escada2","imagens/escada2.png");
+
+	//carregando todos os sons
+	var soundlib = new SoundLib();
+	soundlib.load("pulo", "sons/Mario_Jumping-Mike_Koenig-989896458.wav");
+	soundlib.load("magic", "sons/Flame Arrow-SoundBible.com-618067908.mp3");
+	soundlib.load("fire", "sons/Small Fireball-SoundBible.com-1381880822.mp3");
+	soundlib.load("bonus", "sons/bonus.wav");
+
+	function BancoDeImagens(){
+		this.imagens = {};
+		this.add = function(nome, url){
+			this.imagens[nome] = new Image();
+			this.imagens[nome].src = url;
+		};
+		this.desenhaXY =function(ctx, nome, x, y){
+			ctx.drawImage(this.imagens[nome], x, y);
+		};
+		this.desenhaXYWH =function(ctx, nome, x, y, w, h){
+			ctx.drawImage(this.imagens[nome], x, y, w, h);
+		};
+		this.desenha = function(ctx, nome,
+								x, y, w, h,
+								dx, dy, dw, dh
+		){
+			ctx.drawImage(this.imagens[nome], x, y, w, h,
+					dx, dy, dw, dh);
+		};
+	}
+
+	//*************************************************************
+	// Mapa
+	for (var l = 0; l < 20; l++) {
+		mapa[l] = [];
+		for (var c = 0; c < 40; c++){
+			mapa[l][c] = 0;
+			if(l==19 || c == 0 || c == 39) mapa[l][c] = 1;
+			if(Math.random()<0.10){
+				mapa[l][c] = 1;
+			}
+		}
+	}
+
+	function desenharMapa(){
+		for (var l = 0; l < 20; l++) {
+			for (var c = 0; c < 40; c++){
+				if(mapa[l][c] == 1 && c == 0){
+					imagens.desenha(ctx, "escada", 0, 16, 32, 64, c * 30, l * 30, 30, 40);
+				}else if(mapa[l][c] == 1 && c == 39) {
+					imagens.desenha(ctx, "escada2", 0, 16, 32, 64, c * 30, l * 30, 30, 40);
+				}else if(mapa[l][c]==1) {
+					imagens.desenha(ctx, "terreno", 24, 16, 48, 64, c * 30, l * 30, 30, 40);
+				}
+			}
+		}
+	}
+
+	//*************************************************************
+	// Player
+	player.hit = new Array();
+	player.escudo = new SpriteEscudo();
+	player.f = 0;
+	player.p = 0;
+	player.velocidadeHit = 250;
+	player.intervaloHit = 10;
+	player.frequenciaHit = 100;
+	player.vidas = MAX_VIDA;
+	player.mana = MAX_MANA;
+
+	player.controlar = function(){
+		if(this.direita){
+			this.ax = -150;
+		}else if(this.esquerda){
+			this.ax =  150;
+		}else{
+			this.ax = 0;
+		}
+		if(this.pulando && this.vy == 0){
+			var gcx = Math.floor(this.x/30);
+			if(gcx == 0 || gcx == 39){
+				this.vy = -100;
+			}else {
+				this.vy = -2 * g;
+				soundlib.play("pulo", 5);
+			}
+
+		}else if(this.descendo){
+			var gcx = Math.floor(this.x/30);
+			if(gcx == 0 || gcx == 39) {
+				this.ay = 0;
+				this.vy = 100;
+			}
+		}
+
+		if(this.atira){
+			if(this.intervaloHit > this.frequenciaHit && this.mana > MAX_MANA * 0.2) {
+				if(this.vx < 0){
+					if(bonus.playerComBonus == true) {
+						this.hit.push(new SpriteTiro(this.x - 14, this.y - 30, "magicHit", -this.velocidadeHit, true));
+						bonus.reset();
+					}
+					else{
+						this.hit.push(new SpriteTiro(this.x - 14, this.y - 30, "magicHit", -this.velocidadeHit, false));
+					}
+				}else {
+					if (bonus.playerComBonus == true) {
+						this.hit.push(new SpriteTiro(this.x + 14, this.y - 30, "magicHit", this.velocidadeHit, true));
+						bonus.reset();
+					}
+					else {
+						this.hit.push(new SpriteTiro(this.x + 14, this.y - 30, "magicHit", this.velocidadeHit, false));
+					}
+				}
+				this.intervaloHit = 0;
+				this.mana -= MAX_MANA * 0.2;
+				soundlib.play("magic", 5);
+			}
+		}
+		if(this.defende == true){
+			if(this.mana > MAX_MANA * 0.6) {
+				this.escudo.tempoEscudo = 0;
+				this.mana = this.mana - MAX_MANA * 0.6;
+			}
+		}
+
+	};
+
+	player.desenhar = function(ctx){
+		ctx.save();
+		ctx.translate(this.x, this.y);
+		ctx.rotate(this.angulo+Math.PI/2);
+
+		if(Math.abs(player.vx) < 2) {
+			player.vx = 0;
+			player.p = 0;
+			ctx.scale(3, 3);
+		}
+		else if(player.vx > 0) {
+			player.p = 2;
+			ctx.scale(3, 3);
+		}else if(player.vx < 0){
+			player.p = 3;
+			ctx.scale(3, 3);
+		}
+
+		player.f += 8*dt;
+
+		if(player.vy < 0){
+			player.p = 1;
+		}else if(player.vy > 0){
+			player.p = 0;
+		}
+
+		switch(player.p){
+			case 0:
+				if(player.f >= 6) player.f = 1;
+				break;
+			case 1:
+				if(player.f >= 6) player.f = 1;
+				break;
+			case 2:
+				if(player.f >= 6) player.f = 1;
+				break;
+			case 3:
+				if(player.f >= 6) player.f = 1;
+				break;
+		}
+
+		imagens.desenha(ctx, "player", Math.floor(player.f)*36.5, player.p*36.5, 36.5, 36.5, -8, -8, 16, 16);
+
+		ctx.restore();
+		//ctx.strokeStyle = "white";
+		//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+	};
+
+	//*************************************************************
+	//inimigo
+	inimigo.hit = new Array();
+	inimigo.escudo = new SpriteEscudo();
+	inimigo.velocidadeHit = 250;
+	inimigo.intervaloHit = 10;
+	inimigo.frequenciaHit = 100;
+	inimigo.x = 30*18;
+	inimigo.f = 1;
+	inimigo.p = 1;
+	inimigo.vidas = MAX_VIDA;
+	inimigo.mana = MAX_MANA;
+
+	inimigo.controlar = function () {
+		if(player.vx == 0){
+			this.vx = 0;
+		}else if(this.x>player.x){
+			this.ax = -100;
+		}else if(this.x<player.x){
+			this.ax = 100;
+		}
+		if(this.y>player.y && this.vy == 0){
+			this.vy -= 2*g;
+			soundlib.play("pulo", 5);
+		}
+	};
+
+	inimigo.atira = function(){
+		if(Math.random()<0.01){
+			if(this.intervaloHit > this.frequenciaHit && this.mana > MAX_MANA * 0.2) {
+				if(this.vx < 0)
+					this.hit.push(new SpriteTiro(this.x - 14, this.y - 30, "fireHit", -this.velocidadeHit, false));
+				else
+					this.hit.push(new SpriteTiro(this.x + 14, this.y - 30, "fireHit", this.velocidadeHit, false));
+				this.intervaloHit = 0;
+				this.mana -= MAX_MANA * 0.2;
+				soundlib.play("fire", 5);
+			}
+		}
+	}
+
+	inimigo.shield = function(){
+		if(Math.random()<0.01){
+			if(this.mana > MAX_MANA * 0.6) {
+				this.escudo.tempoEscudo = 0;
+				this.mana = this.mana - MAX_MANA * 0.6;
+			}
+		}
+	}
+
+	inimigo.desenhar = function(ctx){
+		ctx.save();
+		ctx.translate(this.x, this.y);
+		ctx.rotate(this.angulo+Math.PI/2);
+
+		if(Math.abs(inimigo.vx) < 2) {
+			inimigo.p = 5;
+			ctx.scale(3, 3);
+		}
+		else if(inimigo.vx > 0) {
+			inimigo.p = 7;
+			ctx.scale(3, 3);
+		}else if(inimigo.vx < 0){
+			inimigo.p = 7;
+			ctx.scale(-3, 3);
+		}
+
+		inimigo.f += 8*dt;
+
+		if(inimigo.vy < 0){
+			inimigo.p = 6;
+		}else if(inimigo.vy > 0){
+			inimigo.p = 6;
+		}
+
+		switch(inimigo.p){
+			case 5:
+				if(inimigo.f >= 9) inimigo.f = 1;
+				break;
+			case 7:
+				if(inimigo.f >= 9) inimigo.f = 1;
+				break;
+			case 6:
+				if(inimigo.f >= 9) inimigo.f = 1;
+				break;
+		}
+
+		imagens.desenha(ctx, "inimigo", Math.floor(inimigo.f)*32, inimigo.p*32, 32, 32, -8, -9, 16, 17);
+
+		ctx.restore();
+		//ctx.strokeStyle = "white";
+		//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+	};
+
+	//*************************************************************
+	//bonus
+	bonus.x = 30*15;
+	bonus.playerComBonus = false;
+
+	bonus.controlar = function () {
+		if(this.x>player.x){
+			this.ax = 100;
+		}else if(this.x<player.x){
+			this.ax = -100;
+		}
+		if(this.y==player.y && this.vy == 0){
+			this.vy -= 2*g;
+		}
+	};
+
+	bonus.desenhar = function(ctx){
+		ctx.save();
+
+		if(bonus.playerComBonus == true){
+			bonus.x = player.x - 40;
+			bonus.y = player.y - 20;
+		}
+
+		ctx.translate(this.x, this.y);
+		ctx.rotate(this.angulo+Math.PI/2);
+
+		if(bonus.playerComBonus == true){
+			bonus.x = player.x;
+			bonus.y = player.y;
+		}
+		imagens.desenhaXYWH(ctx, "bonus", 0, 0, 64, 64);
+
+		ctx.restore();
+		//ctx.strokeStyle = "white";
+		//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+	};
+
+	bonus.reset = function(){
+		bonus.x = 30*Math.random()*20+1;
+		bonus.y = 30;
+		bonus.vy = 0;
+		bonus.vx = 0;
+		bonus.playerComBonus = false;
+	};
+
+	//*************************************************************
+
+
+	addEventListener("keydown", function(e){
+		if(e.keyCode==37){
+			player.direita = true;
+		}
+		if(e.keyCode==39){
+			player.esquerda = true;
+		}
+		if(e.keyCode==38){
+			player.pulando = true;
+		}
+		if(e.keyCode==32){//espaço
+			player.atira = true;
+		}
+		if(e.keyCode==88){//X
+			player.defende = true;
+		}
+		if(e.keyCode==40) {//seta para cima
+			player.descendo = true;
+		}
+	});
+	addEventListener("keyup", function(e){
+		if(e.keyCode==37){
+			player.direita = false;
+		}
+		if(e.keyCode==39){
+			player.esquerda = false;
+		}
+		if(e.keyCode==38){
+			player.pulando = false;
+		}
+		if(e.keyCode==32){//espaço
+			player.atira = false;
+		}
+		if(e.keyCode==88){//X
+			player.defende = false;
+		}
+		if(e.keyCode==40) {//seta para cima
+			player.descendo = false;
+		}
+		
+	});
+
+	setInterval(passo, 1000/fps);
+
+
+	//***********************************************************************
+	//função principal
+
+	function passo(){
+
+		imagens.desenhaXYWH(ctx, "fundo", 0 , 0, tela.width, tela.height);
+
+		desenharMapa();
+
+		player.controlar();
+		inimigo.controlar();
+		bonus.controlar();
+		inimigo.moverCartGrid(dt,200, mapa);
+		bonus.moverCartGrid(dt,200, mapa);
+
+		var gcx = Math.floor(player.x/30);
+		if((gcx == 0 || gcx == 39) && (player.pulando || player.descendo)){
+			player.moverCartGrid(dt,0, mapa);
+		}else {
+			player.moverCartGrid(dt,200, mapa);
+		}
+
+		bonus.desenhar(ctx);
+		player.desenhar(ctx);
+		inimigo.desenhar(ctx);
+
+
+		inimigo.atira();
+		inimigo.shield();
+
+
+		if(player.vx < 0) {
+			player.escudo.desenhar(ctx, "shieldMagicInverted", player.x - 60, player.y - 25, dt);
+		}
+		else{
+			player.escudo.desenhar(ctx, "shieldMagic", player.x + 10, player.y - 25, dt);
+		}
+
+		if(inimigo.vx < 0) {
+			inimigo.escudo.desenhar(ctx, "shieldFireInverted", inimigo.x - 60, inimigo.y - 25, dt);
+		}
+		else{
+			inimigo.escudo.desenhar(ctx, "shieldFire", inimigo.x + 10, inimigo.y - 25, dt);
+		}
+
+		if(player.colidiuCom(inimigo)){
+			player.x = 30;
+			player.y = 30;
+			player.vy = 0;
+			player.vx = 0;
+			player.vidas = player.vidas - 50;
+		}
+		if(bonus.playerComBonus == false && player.colidiuCom(bonus)){
+			bonus.playerComBonus = true;
+			soundlib.play("bonus", 0);
+		}
+
+		for(var i=0;i<player.hit.length;i++){
+			if(player.hit[i]>1200 || player.hit[i] < 0){
+				player.hit.splice(i,1);
+				i--;
+			}else{
+				player.hit[i].mover(dt);
+				player.hit[i].desenhar(ctx);
+
+				if(player.hit[i].colidiuCom(inimigo.escudo)){
+					player.hit.splice(i, 1);
+					i--;
+				}
+				else if(player.hit[i].colidiuCom(inimigo)){
+					inimigo.x = 30;
+					inimigo.y = 30;
+					inimigo.vy = 0;
+					inimigo.vx = 0;
+					if(player.hit[i].tiroComBonus == true)
+						inimigo.vidas  = inimigo.vidas - 100;
+					else
+						inimigo.vidas = inimigo.vidas - 50;
+
+					player.hit.splice(i, 1);
+					i--;
+				}else {
+					var gcx = Math.floor(player.hit[i].x / 30);
+					var gcy = Math.floor(player.hit[i].y / 30);
+					if (mapa[gcy][gcx] == 1 && gcx != 39 && gcx != 0) { //CONFERE SE O TIRO COLIDE COM O MAPA, SE SIM DESTROI O MAPA E O TIRO
+						mapa[gcy][gcx] = !mapa[gcy][gcx];
+					}
+				}
+			}
+
+		}
+
+		for(var i=0;i<inimigo.hit.length;i++){
+			if(inimigo.hit[i]>1200 || inimigo.hit[i] < 0){
+				inimigo.hit.splice(i,1);
+				i--;
+			}else{
+				inimigo.hit[i].mover(dt);
+				inimigo.hit[i].desenhar(ctx);
+
+				if(inimigo.hit[i].colidiuCom(player.escudo)){
+					inimigo.hit.splice(i, 1);
+					i--;
+				}
+				else if(inimigo.hit[i].colidiuCom(player)){
+					player.x = 30;
+					player.y = 30;
+					player.vy = 0;
+					player.vx = 0;
+					player.vidas = player.vidas - 50;
+					inimigo.hit.splice(i, 1);
+					i--;
+				}
+				else{
+					var gcx = Math.floor(inimigo.hit[i].x/30);
+					var gcy = Math.floor(inimigo.hit[i].y/30);
+					if (mapa[gcy][gcx] == 1 && gcx != 39 && gcx != 0) { //CONFERE SE O TIRO COLIDE COM O MAPA, SE SIM DESTROI O MAPA E O TIRO
+						mapa[gcy][gcx] = !mapa[gcy][gcx];
+					}
+				}
+
+
+			}
+
+		}
+
+
+		//imprime na tela a quantidade de vidas
+		ctx.fillStyle = "white";
+		ctx.beginPath();
+		ctx.fillText("Player Vidas = "+ player.vidas, 310, 10, 100);
+		ctx.fillText("Inimigo Vidas = "+ inimigo.vidas, 310, 20, 100);
+		ctx.closePath();
+		ctx.stroke();
+
+		//barra de vida do player
+		ctx.fillStyle = "red";
+		ctx.fillRect(1,1,player.vidas,10);
+		ctx.strokeStyle = "dark";
+		ctx.lineWidth = 3;
+		ctx.strokeRect(1,1,player.vidas,10);
+
+		//barra de vida do inimigo
+		ctx.fillStyle = "blue";
+		ctx.fillRect(1,15,player.mana,10);
+		ctx.strokeStyle = "dark";
+		ctx.lineWidth = 3;
+		ctx.strokeRect(1,15,player.mana,10);
+
+		//barra de mana do player
+		ctx.fillStyle = "red";
+		ctx.fillRect(tela.width-inimigo.vidas,1,inimigo.vidas,10);
+		ctx.strokeStyle = "dark";
+		ctx.lineWidth = 3;
+		ctx.strokeRect(tela.width-inimigo.vidas,1,inimigo.vidas,10);
+
+		//barra de mana do inimigo
+		ctx.fillStyle = "blue";
+		ctx.fillRect(tela.width-inimigo.mana,15,inimigo.mana,10);
+		ctx.strokeStyle = "dark";
+		ctx.lineWidth = 3;
+		ctx.strokeRect(tela.width-inimigo.mana,15,inimigo.mana,10);
+
+		player.intervaloHit+=dt*30;
+		player.intervaloEscudo+=dt*30;
+		inimigo.intervaloHit+=dt*30;
+		inimigo.intervaloEscudo+=dt*30;
+
+		if(player.vidas < 0) {
+			ctx.clearRect(0, 0, tela.width, tela.height);
+			ctx.fillStyle = "black";
+			ctx.beginPath();
+			ctx.fillText("GAME OVER", tela.width/2, tela.height/2, 1000);
+			ctx.closePath();
+			ctx.stroke();
+		}else if(inimigo.vidas < 0) {
+			ctx.clearRect(0, 0, tela.width, tela.height);
+			ctx.fillStyle = "black";
+			ctx.beginPath();
+			ctx.fillText("YOU WIN", tela.width/2, tela.height/2, 1000);
+			ctx.closePath();
+			ctx.stroke();
+		}
+
+		if(player.mana < MAX_MANA)
+			player.mana += 5*dt;
+		if(inimigo.mana < MAX_MANA)
+			inimigo.mana += 5*dt;
+
+	}
+
+	addEventListener("mousedown", clique);
+	function clique(e){
+		console.dir(e);
+		var gcx = Math.floor(e.offsetX/30);
+		var gcy = Math.floor(e.offsetY/30);
+		mapa[gcy][gcx] = !mapa[gcy][gcx];
+	}
+	</script>
+	</body>
+</html>
