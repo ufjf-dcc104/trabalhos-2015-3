@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, user-scalable=0,minimum-scale=1.0, maximum-scale=1.0"/>
+		<title>Plataforma</title>
+		<script src="Sprite.js"></script>
+		<script src="SoundLib.js"></script>
+	</head>
+	<body>
+		<h1>Plataforma</h1>
+		<canvas width="600" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	var numEnimigos = 1;
+	var movSoco = true;
+	var cidade = new Image();
+	cidade.src = "Cidade_Destruida.jpg"
+	var end = new Image();
+	end.src = "end.jpg"
+	var mapa = [];
+	mapa.img = new Image();
+	mapa.img.src = "platformer_32_mini.png";
+	var fps = 60;
+	var g = 200;
+	var dt = 1/fps;
+	var time = new Date();
+	var pontos = 0;
+	var interval;
+	var level = 0;
+	var tipoInimigo = Math.floor((Math.random() * 5) + 0);
+    if(tipoInimigo%2==0) tipoInimigo++;
+	var lastPontos = 0;
+	
+	
+	///CRIANDO ENIMIGOS
+	
+	var inimigos = [];
+	for(var i=0; i<numEnimigos; i++){
+		inimigos.push(novoInimigo());
+	}
+	
+	/////CONSTRUINDO PLATAFORMAS
+	
+	for (var l = 0; l < 10; l++) {
+		mapa[l] = [];
+		for (var c = 0; c < 20; c++){
+			mapa[l][c] = 0;
+			if(l==9 || c == 0 || c == 19) mapa[l][c] = 1;
+			if(Math.random()<0.40){
+				mapa[l][c] = 1;
+			}
+		}
+	}
+	configuraTela();
+	
+	///PREPARANDO SONS
+	
+	var soundlib = new SoundLib();
+	soundlib.load("pulo", "Cartoon Hop-SoundBible.com-553158131.mp3");
+	soundlib.load("boom", "Grenade Explosion-SoundBible.com-2100581469.mp3");
+
+	
+	
+	
+	
+	///CRIANDO PERSONAGENS
+
+	var pc = new Sprite();
+	pc.f = 1; pc.p = 1;
+	pc.img = new Image()
+	pc.img.src="Old hero.png";
+
+	var boom = new Sprite();
+	boom.x = -100;
+	boom.img = new Image();
+	boom.img.src = "explosion17.png"
+	
+	function novoInimigo(){
+		var inimigo = new Sprite();
+		inimigo.x = 30*(18-10*Math.random());
+		inimigo.y = 30*1;
+		inimigo.img = new Image()
+		inimigo.img.src="Old enemies.png";
+		inimigo.f = 1;
+		inimigo.p = tipoInimigo;
+		inimigo.controlar = function () {
+			if(this.x>pc.x){
+				this.ax = 100 ;
+			}else if(this.x<pc.x){
+				this.ax = -100;
+			}
+			if(this.y>pc.y && this.vy == 0){
+				this.vy -= 0.6*g;
+			}
+				
+		}
+		
+		inimigo.desenhar = function(ctx){
+							this.s = this.s||1;
+							ctx.save();
+							ctx.translate(this.x, this.y);
+							ctx.rotate(this.angulo+Math.PI/2);
+							if(this.vx > 0){
+								ctx.scale(-2,2);
+							}else {
+								ctx.scale(2,2);
+							}
+							this.f+=8*dt
+							if(this.f>7) this.f = 1;
+							
+				ctx.drawImage(this.img, Math.floor(this.f)*16, this.p*16, 16, 16,
+										-8, -8, 16, 16	);
+							
+							ctx.restore();
+							//ctx.strokeStyle = "white";
+							//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+						};
+								return inimigo;
+	}
+	
+	
+	
+	
+	///CONTROLE
+
+	pc.controlar = function(){
+		if(this.direita){
+			this.ax = -250;
+		}else if(this.esquerda){
+			this.ax =  250;
+		}else{
+			this.ax = 0;
+		}
+		if(this.pulando && this.vy == 0){
+			this.vy = -0.6*g;
+			this.pulando = false;
+			soundlib.play("pulo", 100);
+		}
+		if(this.socando){
+			
+		}
+	};
+
+	
+	
+	///TECLADO
+		
+	addEventListener("keydown", function(e){
+		//console.log(e.keyCode);
+		if(e.keyCode==37){
+			pc.direita = true;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = true;
+		}
+		if(e.keyCode==38){
+			e.preventDefault();	
+			pc.pulando = true;
+		}
+		if(e.keyCode==32){
+			pc.socando = true;
+			movSoco = true;
+			e.preventDefault();	
+		}
+		if(e.keyCode==40){
+			
+			e.preventDefault();	
+		}
+		
+	});
+	addEventListener("keyup", function(e){
+		e.preventDefault();	
+		if(e.keyCode==37){
+			pc.direita = false;
+
+		}
+		if(e.keyCode==39){
+			pc.esquerda = false;
+		}
+		if(e.keyCode==38){
+			pc.pulando = false;
+		}
+		if(e.keyCode==32){
+			movSoco = false;
+			
+		}
+		
+	});
+	
+	//PASSO
+
+	interval = setInterval(passo, 1000/fps);
+	function passo(){
+		//cenário
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, tela.width, tela.height);	
+		desenharFundo();
+		desenharMapa();
+		
+		
+		
+		//controles
+		pc.controlar();
+		for(var i in inimigos){
+			inimigos[i].controlar();
+		}
+		for(var i in inimigos){
+			inimigos[i].moverCartGrid(dt,200, mapa);
+		}
+		pc.moverCartGrid(dt,200, mapa);
+		
+		//desenho personagens
+		pc.desenhar(ctx);
+		for(var i in inimigos){
+			inimigos[i].desenhar(ctx);
+		}
+		
+		//ciclo de vida de inimigos
+		
+		for(var i in inimigos){
+			if(pc.colidiuCom(inimigos[i])){
+				if((pc.socando)&& ((pc.lado && pc.x - 2 < inimigos[i].x)||(!pc.lado && pc.x + 2 > inimigos[i].x)) && ((pc.y-5<=inimigos[i].y)&&(pc.y+5>inimigos[i].y))){
+					
+					pontos++;
+					if(numEnimigos>1){ 
+					
+						boom.s = 0;
+						boom.x = inimigos[i].x;
+						boom.y = inimigos[i].y;
+						
+						auxX = inimigos[inimigos.length-1].x ;
+						auxY = inimigos[inimigos.length-1].y;
+						auxVx = inimigos[inimigos.length-1].vy;
+						auxVy = inimigos[inimigos.length-1].vx;
+						
+						inimigos[inimigos.length-1].x = 30*Math.random()*20+1;
+						inimigos[inimigos.length-1].y = 30*1;
+						inimigos[inimigos.length-1].vy = 0;
+						inimigos[inimigos.length-1].vx = 0;
+						
+						inimigos[i].x = auxX
+						inimigos[i].y = auxY
+						inimigos[i].vy = auxVx
+						inimigos[i].vx = auxVy
+						numEnimigos--;
+						inimigos.pop();
+					}else{
+						inimigos[i].x = 30*Math.random()*20+1;
+						inimigos[i].y = 30*1;
+						inimigos[i].vy = 0;
+						inimigos[i].vx = 0;
+					}
+					soundlib.play("boom", 100);
+				}
+			}
+		}
+		
+		var newTime = new Date();
+		
+		
+		if(time.getTime()+2000-(level) < newTime.getTime())
+		{
+			time = new Date();
+			numEnimigos++;
+			inimigos.push(novoInimigo());
+		}
+		
+		////NIVEL
+		if (pontos>lastPontos+10){
+			level+= 100;
+			lastPontos+= 10;
+			console.log(pontos+" "+lastPontos+" "+level);
+		}
+
+
+		
+		////BT se movel
+		
+		if(movel) desenhaBotoes(ctx);
+		
+		
+		//BOOM e nave desenho
+		boom.desenhar(ctx);
+		ctx.img = new Image()
+					ctx.img.src="destructor.png";
+					ctx.drawImage(ctx.img, 0,-40, 600, 100	);
+					
+		///PLACAR
+		
+		var color;
+		if(numEnimigos<7){ color = "lime";}
+		else if(numEnimigos>=7 && numEnimigos<10){ color = "orange";}
+		else { 
+			color = "red";
+		}
+		
+		ctx.font = "20px Arial";
+		ctx.fillStyle = color;
+		ctx.fillText("Número de inimigos:"+numEnimigos, 10, 55);
+		ctx.fillText("Pontos: "+pontos, 10, 85);
+		ctx.fillText("Nível: "+(level/100 + 1), 10, 115);
+					if(numEnimigos==10) endGame(ctx);
+	}
+	
+	///FIM DO JOGO
+	function endGame(ctx){
+		
+		ctx.drawImage(end,150,75, 300,150);
+		ctx.font = "30px Georgia";
+		ctx.fillStyle = "yellow";
+		ctx.fillText("Fim de jogo", 285, 100);
+		ctx.fillText(pontos+" Pontos            "+"Nível "+(level/100 + 1), 150, 220);
+		clearInterval(this.interval);
+	}
+	
+	/// MAPEAMENTO DA TELA
+
+	function desenharMapa(){
+
+		for (var l = 0; l < 10; l++) {
+			for (var c = 0; c < 20; c++){
+				if(mapa[l][c]==1){
+					
+					ctx.drawImage(mapa.img, 2*32,0*32, 32, 32,
+							c*30, l*30-22, 30, 30);
+				}
+				if(l==9){
+					ctx.drawImage(mapa.img, 2*32,1*32, 32, 32,
+							c*30, l*30, 30, 30);
+				}
+			}
+		}	
+		
+	}
+	
+	function desenharFundo(){
+		ctx.drawImage(cidade, 0,0, 600,300);
+	}
+	
+	///MOUSE
+	
+	//addEventListener("mousedown", clique);
+	function clique(e){
+		console.dir(e);
+		var gcx = Math.floor((e.clientX -e.offsetX-40)/30);
+		var gcy = Math.floor((e.clientY -e.offsetY-20)/30);
+		mapa[gcy][gcx] = !mapa[gcy][gcx];
+	}
+	
+	
+	///COMPORTAMENTO DOS PERSONAGENS
+	
+	pc.desenhar = function(ctx){
+					ctx.save();
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+					
+					//position para andar
+					if(Math.abs(pc.vx) < 2){
+						pc.vx = 0;
+						if(pc.lado){
+							ctx.scale(2,2);
+						}else ctx.scale(-2,2);
+						pc.p=1;
+						if(pc.socando) pc.p=5;
+					}else if(pc.vx > 0){
+						pc.p=2;
+						ctx.scale(2,2);
+						pc.lado = true;
+						if(pc.socando) pc.p=5;
+					}else {
+						pc.p=2;
+						ctx.scale(-2,2);
+						pc.lado = false;
+						if(pc.socando) pc.p=5;
+					}
+					pc.f+=8*dt
+					
+					switch(pc.p){
+						case 1: if(pc.f>=5) pc.f = 1;
+						break;
+						case 2: if(pc.f>=7) pc.f = 1;
+						break;
+						case 5: if(pc.f>=4) {
+								if(!movSoco)pc.socando = false;
+								pc.f = 1;
+							}
+						break;
+					}
+					//subida e queda
+					if(pc.vy<0){
+						pc.p = 3;
+						pc.f = 1;
+						if(pc.socando){
+							pc.p=5;
+							pc.f = 2;
+						}
+					}else if(pc.vy>0){
+						pc.p = 3;
+						pc.f = 2;
+						if(pc.socando){
+							pc.p=5;
+							pc.f = 3;
+						}
+					}
+								
+		ctx.drawImage(pc.img, Math.floor(pc.f)*16, pc.p*16, 16, 16,
+								-8, -8, 16, 16	);
+
+					ctx.restore();
+					//ctx.strokeStyle = "white";
+					//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+				};
+				
+				///INIMIGO
+	
+				///////////////////////////////////////////
+				///////////////////////////////////////////
+				
+				
+	boom.desenhar = function(ctx){
+					boom.s = boom.s||0;
+					ctx.save();
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+					boom.s+=30*dt;
+					var l = Math.floor(boom.s) % 5;
+					var c = Math.floor(boom.s / 5 );
+					//console.log(l,c,boom.s);
+					if(boom.s>25){
+						boom.s = 0;
+						boom.x = -100;
+						boom.y = -100;
+					}
+					ctx.drawImage(boom.img, l*64, c*64, 64, 64,
+								-32, -32, 64, 64	);
+
+					ctx.restore();
+					//ctx.strokeStyle = "white";
+					//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+	};
+
+	///CONFIGURAÇÕES DE TELA
+	
+	function configuraTela () {
+
+		var altura = window.innerHeight;
+		
+		document.body.style.height = altura+"px";
+		window.scrollTo(0,0);
+		movel = ('ontouchstart' in window);
+		if(!movel) return;
+
+		altura = window.innerHeight;
+		largura = window.innerWidth;
+		tela.style.position = 'absolute';
+		tela.style.top = 0;
+		tela.style.left = 0;
+		var fs = Math.min(altura/tela.height, largura/tela.width);
+		tela.style.width = fs*tela.width+"px";
+		tela.style.height = fs*tela.height+"px";
+	}
+	tela.addEventListener('touchstart', verificaTouch);
+	tela.addEventListener('touchmove', verificaTouch);
+	tela.addEventListener('touchend', verificaTouch);
+	function verificaTouch(e){
+
+		e.preventDefault();
+		pc.direita = false;
+		pc.esquerda = false;
+		pc.pulando = false;
+
+		var tamx = Math.floor(tela.width/8);
+		var tamy = Math.floor(tela.height/8);
+		for (var i = e.targetTouches.length - 1; i >= 0; i--) {
+			var toque = e.targetTouches[i];
+			var posx = Math.floor((toque.pageX)/tamx);
+			var posy = Math.floor((toque.pageY)/tamy);
+			console.log(posy+":"+posx);
+			ctx.fillStyle = 'white';
+			ctx.fillRect(posx*tamx,posy*tamy, tamx,tamy)
+			if((posx==6 || posx==7 )&& posy==6){ pc.pulando= true; }
+				if(posx==6 && posy==7){ pc.direita= true; }
+				if(posx==7 && posy==7){ pc.esquerda= true; }
+		};
+		if(e.type == 'touchstart'||e.type=='touchend'){
+			for (var i = e.targetTouches.length - 1; i >= 0; i--) {
+				var toque = e.targetTouches[i];
+				var posx = Math.floor((toque.pageX)/tamx);
+				var posy = Math.floor((toque.pageY)/tamy);
+				console.log(posy+":"+posx);
+				if((posx==6 || posx==7 )&& posy==6){ pc.pulando= (e.type=='touchstart'); }
+				if(posx==6 && posy==7){ pc.direita= (e.type=='touchstart'); }
+				if(posx==7 && posy==7){ pc.esquerda= (e.type=='touchstart'); }
+				ctx.fillStyle = 'white';
+				ctx.fillRect(posx*tamx,posy*tamy, tamx,tamy)
+
+
+			};
+	}
+
+	}
+
+	function desenhaBotoes (ctx) {
+		var tamx = Math.floor(tela.width/8);
+		var tamy = Math.floor(tela.height/8);
+		ctx.fillStyle = "green";
+		ctx.strokeStyle = "white";
+		ctx.save();
+		ctx.globalAlpha= 0.5;
+		ctx.fillRect(6*tamx, 6*tamy, tamx*2, tamy);
+		ctx.strokeRect(6*tamx, 6*tamy, tamx*2, tamy);
+
+		ctx.fillRect(6*tamx, 7*tamy, tamx, tamy);
+		ctx.fillRect(7*tamx, 7*tamy, tamx, tamy);
+		ctx.strokeRect(6*tamx, 7*tamy, tamx, tamy);
+		ctx.strokeRect(7*tamx, 7*tamy, tamx, tamy);
+		ctx.restore();
+	}
+
+</script>
+</html>

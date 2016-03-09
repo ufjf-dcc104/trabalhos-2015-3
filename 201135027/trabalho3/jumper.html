@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, user-scalable=0,minimum-scale=1.0, maximum-scale=1.0"/>
+		<title>Plataforma</title>
+		<script src="Sprite.js"></script>
+		<script src="SoundLib.js"></script>
+		<link rel="stylesheet" href="estilo.css" type="text/css"/>
+	</head>
+	<body>
+	<div class="container">
+		<img src="one_punch_man_by_kuropop-d9cddhg.gif " style="width:30%; height:30%; "/><br/><br/>
+		<canvas width="600" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+		<div style="background-color:#EEEEEE; text-align:justify; width:650px;display: block; margin-left: auto; margin-right: auto">
+			<div style="background-color:#EEEEEE; text-align:justify; width:600px;display: block; margin-left: auto; margin-right: auto">
+				<h2>História do jogo</h2>
+				<p>Boros chega com sua nave espacial destruindo parte da Cidade A. Rapidamente, a Associação cerca a região ao redor da nave. 
+				Nosso herói, Saitama, fica dentro dessa região contendo todos os aliens que dessem dela sendo atrapalhado por Boros, que, com a sua super regeneração, 
+				volta cada vez mais forte.</p>
+				<p>Em quanto isso o Classe S, Child Emperor, tenta invadir o sistema da nave que cria os aliens. Sem saber o tempo que isso vai levar, Saitama não pode deixar
+				aparecer mais que 10 aliens, ou a barreira será quebrada.
+				</p>
+				<p>Controle o Saitama, e impeça a invasão!!!
+				</p>
+				
+				<h2>Controles</h2>
+				<p><img src="direcionais.jpg"> Movimentos</p>
+				<p><img src="space.png" style="width:30%; height:30%;"> Socos!</p>
+				<p><img src="pause.gif"> Pause</p>
+				<p><img src="restart.gif"> Reiniciar</p>
+				<h2>One Punch Man</h2>
+				<p>One Punch-Man (ワンパンマン, Wanpanman?) é uma webcomic criada pelo autor com o pseudónimo ONE,
+				e publicada desde 2009. A série rapidamente tornou-se um fenómeno viral, alcançando mais de
+				7.9 milhões de acessos, em junho de 2012. O nome da obra é uma paródia da personagem Anpanman,
+				com a palavra punch (パンチ, panchi?, lit. "soco"), que geralmente é abreviada como pan (パン?).
+				</p>
+				<p>Um remake do manga digital foi ilustrado por Yusuke Murata, e publicado no sítio eletrónico 
+				Young Jump Web Comics pela Shueisha, em 2012. Nos países anglófonos, a série é publicada na 
+				revista Weekly Shonen Jump pela Viz Media. No Brasil será publicada pela editora Panini em março
+				de 2016. Uma adaptação em animé feita pela Madhouse, foi exibida entre outubro e dezembro de 2015,
+				totalizando doze episódios e mais sete OVAs, e nos países lusófonos foi transmitida 
+				simultaneamente pela Daisuki.</p>
+				<p>Fonte: <a href="https://pt.wikipedia.org/wiki/One_Punch-Man">Wikipedia</a>
+				</p>
+				<p>Site Oficial: <a href="http://onepunchman-anime.net/">Site do Anime</a>
+				</p>
+				<p>Sprites retirados ou modificados de: <a href="http://opengameart.org/">OpenGameArt</a>
+				</p>
+				<p>Sons de: <a href="http://soundbible.com/">SoundBible</a>
+				</p>
+				<p>Outras imagens retiradas do Google</a>
+				</p>
+				<br/>
+			</div>
+		</div>
+	</div>
+<script>
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	var numEnimigos = 1;
+	var cidade = new Image();
+	cidade.src = "Cidade_Destruida.jpg"
+	var end = new Image();
+	end.src = "end.jpg"
+	var mapa = [];
+	mapa.img = new Image();
+	mapa.img.src = "platformer_32_mini.png";
+	var fps = 60;
+	var g = 200;
+	var dt = 1/fps;
+	var time = new Date();
+	var pontos = 0;
+	var interval;
+	var level = 0;
+	var tipoInimigo = Math.floor((Math.random() * 5) + 0);
+    if(tipoInimigo%2==0) tipoInimigo++;
+	var lastPontos = 0;
+	
+	
+	///CRIANDO ENIMIGOS
+	
+	var inimigos = [];
+	for(var i=0; i<numEnimigos; i++){
+		inimigos.push(novoInimigo());
+	}
+	
+	
+	/////CONSTRUINDO PLATAFORMAS
+	
+	for (var l = 0; l < 10; l++) {
+		mapa[l] = [];
+		for (var c = 0; c < 20; c++){
+			mapa[l][c] = 0;
+			if(l==9 || l==0 || c == 0 || c == 19) mapa[l][c] = 1;
+			if((c==9 || c==10) && l==1) mapa[l][c] = 1;
+			if(Math.random()<0.40){
+				mapa[l][c] = 1;
+			}
+		}
+	}
+	configuraTela();
+	
+	///PREPARANDO SONS
+	
+	var soundlib = new SoundLib();
+	soundlib.load("pulo", "Cartoon Hop-SoundBible.com-553158131.mp3");
+	soundlib.load("boom", "Grenade Explosion-SoundBible.com-2100581469.mp3");
+	soundlib.load("boss", "Torch-SoundBible.com-1962622442.mp3");
+
+	
+	
+	
+	
+	///CRIANDO PERSONAGENS
+
+	var pc = new Sprite();
+	pc.f = 1; pc.p = 1;
+	pc.movSoco = true;
+	pc.img = new Image()
+	pc.img.src="Old hero.png";
+	
+	var boss = new Sprite();
+	boss.x = 30*(18-10*Math.random());
+	boss.f = 1; boss.p = 1;
+	boss.movSoco = true;
+	boss.vidas = 1;
+	boss.img = new Image()
+	boss.img.src="id2.png";
+
+	var boom = new Sprite();
+	boom.x = -100;
+	boom.img = new Image();
+	boom.img.src = "explosion17.png"
+	
+	function novoInimigo(){
+		var inimigo = new Sprite();
+		inimigo.x = 30*(18-10*Math.random());
+		inimigo.y = 30*1;
+		inimigo.img = new Image()
+		inimigo.img.src="Old enemies.png";
+		inimigo.f = 1;
+		inimigo.p = tipoInimigo;
+		
+		inimigo.k = 200-Math.random()*100
+		inimigo.controlar = function () {
+			if(this.x>pc.x){
+				this.ax = inimigo.k ;
+			}else if(this.x<pc.x){
+				this.ax = -inimigo.k;
+			}
+			if(this.y>pc.y && this.vy == 0){
+				this.vy -= 0.6*g;
+			}
+				
+		}
+		
+		inimigo.desenhar = function(ctx){
+							this.s = this.s||1;
+							ctx.save();
+							ctx.translate(this.x, this.y);
+							ctx.rotate(this.angulo+Math.PI/2);
+							if(this.vx > 0){
+								ctx.scale(-2,2);
+							}else {
+								ctx.scale(2,2);
+							}
+							this.f+=8*dt
+							if(this.f>7) this.f = 1;
+							
+				ctx.drawImage(this.img, Math.floor(this.f)*16, this.p*16, 16, 16,
+										-8, -8, 16, 16	);
+							
+							ctx.restore();
+							//ctx.strokeStyle = "white";
+							//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+						};
+								return inimigo;
+	}
+	
+	
+	
+	
+	///CONTROLE
+
+	pc.controlar = function(){
+		if(this.direita){
+			this.ax = -250;
+		}else if(this.esquerda){
+			this.ax =  250;
+		}else{
+			this.ax = 0;
+		}
+		if(this.pulando && this.vy == 0){
+			this.vy = -0.6*g;
+			this.pulando = false;
+			soundlib.play("pulo", 100);
+		}
+		if(this.socando){
+			
+		}
+	};
+	boss.controlar = function(){
+		if(boss.vidas>0){
+			if(this.x>pc.x){
+					this.ax = -225 ;
+				}else if(this.x<pc.x){
+					this.ax = 225;
+				}
+				if(this.y>pc.y && this.vy == 0){
+					this.vy -= 0.6*g;
+					//soundlib.play("pulo", 100);
+			}
+			if(this.socando){
+				
+			}
+		}
+	};
+
+	
+	
+	///TECLADO
+		
+	addEventListener("keydown", function(e){
+		//console.log(e.keyCode);
+		if(e.keyCode==37){
+			pc.direita = true;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = true;
+		}
+		if(e.keyCode==38){
+			e.preventDefault();	
+			pc.pulando = true;
+		}
+		if(e.keyCode==32){
+			pc.socando = true;
+			pc.movSoco = true;
+			e.preventDefault();	
+		}
+		if(e.keyCode==80){
+				alternaPause();
+		}
+		if(e.keyCode==82){
+				restart();
+		}
+		if(e.keyCode==40){
+			
+			e.preventDefault();	
+		}
+		
+	});
+	addEventListener("keyup", function(e){
+		e.preventDefault();	
+		if(e.keyCode==37){
+			pc.direita = false;
+
+		}
+		if(e.keyCode==39){
+			pc.esquerda = false;
+		}
+		if(e.keyCode==38){
+			pc.pulando = false;
+		}
+		if(e.keyCode==32){
+			pc.movSoco = false;
+		}
+	});
+	function restart(){
+		boss.x = 30*(18-10*Math.random());
+		boss.f = 1; boss.p = 1;
+		boss.movSoco = false;
+		boss.vidas = 1;
+		boss.y = 0;
+		boss.vx = 0;
+		boss.vy = 0;
+		boss.ax = 0;
+		boss.ay = 0;
+		pc.x = 130;
+		pc.f = 1; pc.p = 1;
+		pc.movSoco = false;
+		pc.y = 130;
+		pc.vx = 0;
+		pc.vy = 0;
+		pc.ax = 0;
+		pc.ay = 0;
+		for(var i=0; i<numEnimigos; i++){
+			inimigos.pop();
+		}
+		numEnimigos=1;
+		level=0;
+		pontos=0;
+		lastPontos=0;
+		inimigos.push(novoInimigo());
+		clearInterval(this.interval);
+		interval = setInterval(passo, 1000/fps);
+	}
+	
+	//PASSO
+
+	interval = setInterval(passo, 1000/fps);
+	//interval = window.requestAnimationFrame(passo);
+	
+	function passo(){
+		//cenário
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, tela.width, tela.height);	
+		desenharFundo();
+		desenharMapa();
+		
+		
+		
+		//controles
+		pc.controlar();
+		boss.controlar();
+		for(var i in inimigos){
+			inimigos[i].controlar();
+		}
+		for(var i in inimigos){
+			inimigos[i].moverCartGrid(dt,200, mapa);
+		}
+		pc.moverCartGrid(dt,200, mapa);
+		boss.moverCartGrid(dt,200, mapa);
+		//desenho personagens
+		pc.desenhar(ctx);
+		boss.desenhar(ctx);
+		for(var i in inimigos){
+			inimigos[i].desenhar(ctx);
+		}
+		
+		//ciclo de vida de inimigos
+		
+		for(var i in inimigos){
+			if(pc.colidiuCom(inimigos[i])){
+				if((pc.socando)&& ((pc.lado && pc.x - 2 < inimigos[i].x)||(!pc.lado && pc.x + 2 > inimigos[i].x)) && ((pc.y-5<=inimigos[i].y)&&(pc.y+5>inimigos[i].y))){
+					
+					pontos++;
+					if(numEnimigos>1){ 
+					
+						boom.s = 0;
+						boom.x = inimigos[i].x;
+						boom.y = inimigos[i].y;
+						
+						auxX = inimigos[inimigos.length-1].x ;
+						auxY = inimigos[inimigos.length-1].y;
+						auxVx = inimigos[inimigos.length-1].vy;
+						auxVy = inimigos[inimigos.length-1].vx;
+						
+						inimigos[inimigos.length-1].x = 30*Math.random()*20+1;
+						inimigos[inimigos.length-1].y = 30*1;
+						inimigos[inimigos.length-1].vy = 0;
+						inimigos[inimigos.length-1].vx = 0;
+						
+						inimigos[i].x = auxX
+						inimigos[i].y = auxY
+						inimigos[i].vy = auxVx
+						inimigos[i].vx = auxVy
+						numEnimigos--;
+						inimigos.pop();
+					}else{
+						inimigos[i].x = 30*Math.random()*20+1;
+						inimigos[i].y = 30*1;
+						inimigos[i].vy = 0;
+						inimigos[i].vx = 0;
+					}
+					soundlib.play("boom", 100);
+				}
+			}
+		}
+		
+		if(pc.colidiuCom(boss)){
+				if((pc.socando)&& ((pc.lado && pc.x - 2 < boss.x)||(!pc.lado && pc.x + 2 > boss.x)) && ((pc.y-5<=boss.y)&&(pc.y+5>boss.y))){
+					
+					if(boss.vidas>0){
+						boom.s = 0;
+						boom.x = boss.x;
+						boom.y = boss.y;
+						if(!pc.lado){
+							boss.vx=-700;
+							pontos++;
+						}else {
+							boss.vx=700;
+							pontos++;
+						}
+						boss.vy = -250;
+						boss.vidas--;
+					}
+					if(boss.vidas==0){
+						boss.x = 300;
+						boss.y = 0;
+						boss.vx = 0;
+						boss.vy = 0;
+						boss.ax = 0;
+						boss.ay = 0;
+					}
+					
+					soundlib.play("boom", 100);
+				}
+			}
+			
+		if((boss.lado && boss.x >= pc.x)||(!boss.lado && boss.x  <= pc.x))
+		{
+			boss.socando = true;
+			boss.movSoco = true;
+		}else{
+			boss.movSoco = false
+		}
+			
+		if(boss.colidiuCom(pc)){
+				if((boss.socando)&& ((boss.lado && boss.x - 2 < pc.x)||(!boss.lado && boss.x + 2 > pc.x)) && ((boss.y-5<=pc.y)&&(boss.y+5>pc.y))){
+					
+					
+					if(!boss.lado){
+						pc.vx=-600;
+					}else {
+						pc.vx=600;
+					}
+					pc.vy = -200;
+					boss.movSoco = false;
+					
+					soundlib.play("boss", 100);
+				}
+			}
+		
+		var newTime = new Date();
+		
+		
+		if(time.getTime()+2000-(level) < newTime.getTime())
+		{
+			time = new Date();
+			numEnimigos++;
+			inimigos.push(novoInimigo());
+		}
+		
+		////NIVEL
+		if (pontos>lastPontos+10){
+			level+= 100;
+			if(boss.vidas == 0)boss.x = 30*(18-10*Math.random());
+			boss.vidas = level/100 +1;
+			
+			lastPontos+= 10;
+			console.log(pontos+" "+lastPontos+" "+level);
+		}
+
+
+		
+		////BT se movel
+		
+		if(movel) desenhaBotoes(ctx);
+		
+		
+		//BOOM e nave desenho
+		boom.desenhar(ctx);
+		ctx.img = new Image()
+					ctx.img.src="destructor.png";
+					ctx.drawImage(ctx.img, 0,-40, 600, 100	);
+					
+		///PLACAR
+		ctx.globalAlpha = 0.6;
+		ctx.beginPath();
+		ctx.fillStyle = "white";
+		ctx.strokeStyle="white";
+		ctx.fillRect(10,275,500,20);
+		ctx.stroke();
+		ctx.globalAlpha = 1;
+		var color;
+		if(numEnimigos<7){ color = "green";}
+		else if(numEnimigos>=7 && numEnimigos<10){ color = "orange";}
+		else { 
+			color = "red";
+		}
+		
+		ctx.font = "bold 20px Arial";
+		ctx.font = "bold 20px Arial";
+		ctx.fillStyle = color;
+		ctx.fillText("Aliens:"+numEnimigos, 10, 290);
+		ctx.fillText(" Pontos: "+pontos, 100, 290);
+		ctx.fillText("   Nível: "+(level/100 + 1), 200, 290);
+		ctx.fillText("  BOROS:", 300, 290);
+					if(numEnimigos==10) endGame();
+					
+		ctx.beginPath();
+		ctx.fillStyle = "white";
+		ctx.strokeStyle="white";
+		ctx.fillRect(400,277,100,10);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.fillStyle = "blue";
+		ctx.strokeStyle="blue";
+		ctx.fillRect(400,277,100*boss.vidas/(level/100 + 1),10);
+		ctx.stroke();
+					
+	}
+	
+	
+	function alternaPause(){
+		if(interval!==null){
+			console.log("Pause!");
+			clearInterval(this.interval);
+			interval = null; 
+			ctx.globalAlpha = 0.8;
+			ctx.beginPath();
+			ctx.fillStyle = "white";
+			ctx.strokeStyle="white";
+			ctx.fillRect(146,262,308,36);
+			ctx.stroke();
+			ctx.globalAlpha = 1;
+			
+			ctx.drawImage(end,150,75, 300,150);
+			ctx.font = "30px Georgia";
+			ctx.fillStyle = "yellow";
+			ctx.fillText("Pausado!!!", 285, 100);
+			ctx.fillText(pontos+" Pontos          "+"Nível "+(level/100 + 1), 150, 220);
+			ctx.fillStyle = "black";
+			ctx.fillText("Tecle P para continuar", 152, 290);
+		}else{
+			console.log("Ação!");
+			atual = new Date();
+			anterior = atual;
+			interval = setInterval(passo, 1000/fps);
+		}
+	}
+	///FIM DO JOGO
+	function endGame(){
+		clearInterval(this.interval);
+		interval=null;
+		
+		ctx.globalAlpha = 0.8;
+		ctx.beginPath();
+		ctx.fillStyle = "gray";
+		ctx.strokeStyle="gray";
+		ctx.fillRect(144,262,313,36);
+		ctx.stroke();
+		ctx.globalAlpha = 1;
+		
+		ctx.drawImage(end,150,75, 300,150);
+		ctx.font = "30px Georgia";
+		ctx.fillStyle = "yellow";
+		ctx.fillText("Fim de jogo", 285, 100);
+		ctx.fillText(pontos+" Pontos          "+"Nível "+(level/100 + 1), 150, 220);
+		ctx.fillStyle = "black";
+		ctx.fillText("Tecle R para recarregar", 146, 290);
+		interval = setInterval(endGame2, 1000/fps);
+	}
+	var count = 1;
+	var lim = 10
+	var color2 = "yellow"
+	function endGame2()
+	{
+		ctx.globalAlpha = 0.8;
+		ctx.beginPath();
+		ctx.fillStyle = "gray";
+		ctx.strokeStyle="gray";
+		ctx.fillRect(144,262,313,36);
+		ctx.stroke();
+		ctx.globalAlpha = 1;
+		
+		ctx.drawImage(end,150,75, 300,150);
+		ctx.font = "30px Georgia";
+		ctx.fillStyle = "yellow";
+		ctx.fillText("Fim de jogo", 285, 100);
+		ctx.fillText(pontos+" Pontos          "+"Nível "+(level/100 + 1), 150, 220);
+		if(count >  lim){
+			color2 = "black";
+		}else color2 = "yellow";
+		if(lim+10<count) lim = count +10;
+		count++;
+		ctx.fillStyle = color2;
+		ctx.fillText("Tecle R para recarregar", 146, 290);
+	}
+	
+	/// MAPEAMENTO DA TELA
+
+	function desenharMapa(){
+
+		for (var l = 0; l < 10; l++) {
+			for (var c = 0; c < 20; c++){
+				if(mapa[l][c]==1){
+					
+					ctx.drawImage(mapa.img, 2*32,0*32, 32, 32,
+							c*30, l*30-22, 30, 30);
+				}
+				if(l==9){
+					ctx.drawImage(mapa.img, 2*32,1*32, 32, 32,
+							c*30, l*30, 30, 30);
+				}
+				if(c==0){
+					ctx.drawImage(mapa.img, 2*32,1*32, 32, 32,
+							c*30 - 24, l*30, 30, 30);
+				}
+				if(c==19){
+					ctx.drawImage(mapa.img, 2*32,1*32, 32, 32,
+							c*30 + 25, l*30, 30, 30);
+				}
+			}
+		}	
+		
+	}
+	
+	function desenharFundo(){
+		ctx.drawImage(cidade, 0,0, 600,300);
+	}
+	
+	///MOUSE
+	
+	//addEventListener("mousedown", clique);
+	function clique(e){
+		console.dir(e);
+		var gcx = Math.floor((e.clientX -e.offsetX-40)/30);
+		var gcy = Math.floor((e.clientY -e.offsetY-20)/30);
+		mapa[gcy][gcx] = !mapa[gcy][gcx];
+	}
+	
+	
+	///COMPORTAMENTO DOS PERSONAGENS
+	
+	pc.desenhar = function(ctx){
+					ctx.save();
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+					
+					//position para andar
+					if(Math.abs(pc.vx) < 2){
+						pc.vx = 0;
+						if(pc.lado){
+							ctx.scale(2,2);
+						}else ctx.scale(-2,2);
+						pc.p=1;
+						if(pc.socando) pc.p=5;
+					}else if(pc.vx > 0){
+						pc.p=2;
+						ctx.scale(2,2);
+						pc.lado = true;
+						if(pc.socando) pc.p=5;
+					}else {
+						pc.p=2;
+						ctx.scale(-2,2);
+						pc.lado = false;
+						if(pc.socando) pc.p=5;
+					}
+					pc.f+=8*dt
+					
+					switch(pc.p){
+						case 1: if(pc.f>=5) pc.f = 1;
+						break;
+						case 2: if(pc.f>=7) pc.f = 1;
+						break;
+						case 5: if(pc.f>=4) {
+								if(!pc.movSoco)pc.socando = false;
+								pc.f = 1;
+							}
+						break;
+					}
+					//subida e queda
+					if(pc.vy<0){
+						pc.p = 3;
+						pc.f = 1;
+						if(pc.socando){
+							pc.p=5;
+							pc.f = 2;
+						}
+					}else if(pc.vy>0){
+						pc.p = 3;
+						pc.f = 2;
+						if(pc.socando){
+							pc.p=5;
+							pc.f = 3;
+						}
+					}
+								
+		ctx.drawImage(pc.img, Math.floor(pc.f)*16, pc.p*16, 16, 16,
+								-8, -8, 16, 16	);
+
+					ctx.restore();
+					//ctx.strokeStyle = "white";
+					//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+				};
+				
+				///INIMIGO
+	
+				///////////////////////////////////////////
+				///////////////////////////////////////////
+				
+	boss.desenhar = function(ctx){
+					ctx.save();
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+					
+					//position para andar
+					if(Math.abs(boss.vx) < 2){
+						boss.vx = 0;
+						if(boss.lado){
+							ctx.scale(2,2);
+						}else ctx.scale(-2,2);
+						boss.p=1;
+						if(boss.socando) boss.p=5;
+					}else if(boss.vx > 0){
+						boss.p=2;
+						ctx.scale(2,2);
+						boss.lado = true;
+						if(boss.socando) boss.p=5;
+					}else {
+						boss.p=2;
+						ctx.scale(-2,2);
+						boss.lado = false;
+						if(boss.socando) boss.p=5;
+					}
+					boss.f+=8*dt
+					
+					switch(boss.p){
+						case 1: if(boss.f>=5) boss.f = 1;
+						break;
+						case 2: if(boss.f>=7) boss.f = 1;
+						break;
+						case 5: if(boss.f>=4) {
+								if(!boss.movSoco)boss.socando = false;
+								boss.f = 1;
+							}
+						break;
+					}
+					//subida e queda
+					if(boss.vy<0){
+						boss.p = 3;
+						boss.f = 1;
+						if(boss.socando){
+							boss.p=5;
+							boss.f = 2;
+						}
+					}else if(boss.vy>0){
+						boss.p = 3;
+						boss.f = 2;
+						if(boss.socando){
+							boss.p=5;
+							boss.f = 3;
+						}
+					}
+								
+		ctx.drawImage(boss.img, Math.floor(boss.f)*16, boss.p*16, 16, 16,
+								-8, -10, 18, 18	);
+
+					ctx.restore();
+					//ctx.strokeStyle = "white";
+					//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+				};
+				
+	boom.desenhar = function(ctx){
+					boom.s = boom.s||0;
+					ctx.save();
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+					boom.s+=30*dt;
+					var l = Math.floor(boom.s) % 5;
+					var c = Math.floor(boom.s / 5 );
+					//console.log(l,c,boom.s);
+					if(boom.s>25){
+						boom.s = 0;
+						boom.x = -100;
+						boom.y = -100;
+					}
+					ctx.drawImage(boom.img, l*64, c*64, 64, 64,
+								-32, -32, 64, 64	);
+
+					ctx.restore();
+					//ctx.strokeStyle = "white";
+					//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+	};
+
+	///CONFIGURAÇÕES DE TELA
+	
+	function configuraTela () {
+
+		var altura = window.innerHeight;
+		
+		document.body.style.height = altura+"px";
+		window.scrollTo(0,0);
+		movel = ('ontouchstart' in window);
+		if(!movel) return;
+
+		altura = window.innerHeight;
+		largura = window.innerWidth;
+		tela.style.position = 'absolute';
+		tela.style.top = 0;
+		tela.style.left = 0;
+		var fs = Math.min(altura/tela.height, largura/tela.width);
+		tela.style.width = fs*tela.width+"px";
+		tela.style.height = fs*tela.height+"px";
+	}
+	tela.addEventListener('touchstart', verificaTouch);
+	tela.addEventListener('touchmove', verificaTouch);
+	tela.addEventListener('touchend', verificaTouch);
+	function verificaTouch(e){
+
+		e.preventDefault();
+		pc.direita = false;
+		pc.esquerda = false;
+		pc.pulando = false;
+
+		var tamx = Math.floor(tela.width/8);
+		var tamy = Math.floor(tela.height/8);
+		for (var i = e.targetTouches.length - 1; i >= 0; i--) {
+			var toque = e.targetTouches[i];
+			var posx = Math.floor((toque.pageX)/tamx);
+			var posy = Math.floor((toque.pageY)/tamy);
+			console.log(posy+":"+posx);
+			ctx.fillStyle = 'white';
+			ctx.fillRect(posx*tamx,posy*tamy, tamx,tamy)
+			if((posx==6 || posx==7 )&& posy==6){ pc.pulando= true; }
+				if(posx==6 && posy==7){ pc.direita= true; }
+				if(posx==7 && posy==7){ pc.esquerda= true; }
+		};
+		if(e.type == 'touchstart'||e.type=='touchend'){
+			for (var i = e.targetTouches.length - 1; i >= 0; i--) {
+				var toque = e.targetTouches[i];
+				var posx = Math.floor((toque.pageX)/tamx);
+				var posy = Math.floor((toque.pageY)/tamy);
+				console.log(posy+":"+posx);
+				if((posx==6 || posx==7 )&& posy==6){ pc.pulando= (e.type=='touchstart'); }
+				if(posx==6 && posy==7){ pc.direita= (e.type=='touchstart'); }
+				if(posx==7 && posy==7){ pc.esquerda= (e.type=='touchstart'); }
+				ctx.fillStyle = 'white';
+				ctx.fillRect(posx*tamx,posy*tamy, tamx,tamy)
+
+
+			};
+	}
+
+	}
+
+	function desenhaBotoes (ctx) {
+		var tamx = Math.floor(tela.width/8);
+		var tamy = Math.floor(tela.height/8);
+		ctx.fillStyle = "green";
+		ctx.strokeStyle = "white";
+		ctx.save();
+		ctx.globalAlpha= 0.5;
+		ctx.fillRect(6*tamx, 6*tamy, tamx*2, tamy);
+		ctx.strokeRect(6*tamx, 6*tamy, tamx*2, tamy);
+
+		ctx.fillRect(6*tamx, 7*tamy, tamx, tamy);
+		ctx.fillRect(7*tamx, 7*tamy, tamx, tamy);
+		ctx.strokeRect(6*tamx, 7*tamy, tamx, tamy);
+		ctx.strokeRect(7*tamx, 7*tamy, tamx, tamy);
+		ctx.restore();
+	}
+
+</script>
+</html>

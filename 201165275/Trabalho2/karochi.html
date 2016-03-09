@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, user-scalable=0,minimum-scale=1.0, maximum-scale=1.0"/>
+		<title>Karochi Suicide Salaryman</title>
+		<script src="Sprite.js"></script>
+		<script src="SoundLib.js"></script>
+	</head>
+	<body>
+		<h1>Karochi Suicide Salaryman</h1>
+		<canvas width="600" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+		
+		<script>
+			//INICIALIZAÇÃO CANVAS
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			
+			//INICIALIZACAO MAPA
+			var mapa = [];
+			mapa.img = new Image();
+			mapa.img.src = "images/Background/background.png";
+			for (var l = 0; l < 10; l++) {
+				mapa[l] = [];
+				for (var c = 0; c < 20; c++){
+					mapa[l][c] = 0;
+					if(l==9 ) mapa[l][c] = 1;
+				}
+			}
+			mapa[8][2] = 2;
+			
+			//INICIALIZACAO SOM
+			var soundlib = new SoundLib();
+			soundlib.load("fundo", "sounds/backgroundsound.mp3");
+			soundlib.load("dying", "sounds/dying.wav");
+			
+			//INICIALIZACAO TELA
+			var fps = 60;
+			var g = 60;
+			var dt = 1/fps;
+			
+			//INICIALIZACAO SPIKES
+			var spikes = new Sprite();
+			spikes.flag = false;
+			spikes.x = -50;
+			spikes.y = -50;
+			spikes.img = new Image();
+			spikes.img.src = "images/Background/spikes.png";
+			
+			//DESENHA SPIKES
+			spikes.desenhar = function(ctx){
+				ctx.save();
+				ctx.translate(spikes.x, spikes.y);
+				ctx.drawImage(spikes.img, 0, 0, 163, 159, -15, -15, 30, 30);
+				ctx.restore();
+				//ctx.strokeStyle = "red";
+				//ctx.strokeRect(Math.floor(spikes.x/30)*30,Math.floor(spikes.y/30)*30, 30, 30);
+			};
+			
+			//INICIALIZACAO TIJOLO
+			var tijolo = [30];
+			tijolo.img = new Image();
+			tijolo.img.src = "images/Background/brick.png";
+			for(var i = 0; i < 30; i++){
+				tijolo[i] = new Sprite();
+				tijolo[i].flag = false;
+				tijolo[i].x = -50;
+				tijolo[i].y = -50;
+			}
+			
+			//DESENHA TIJOLO
+			desenharTijolo = function(ctx, tijolo2){
+				ctx.save();
+				ctx.translate(tijolo2.x, tijolo2.y);
+				ctx.drawImage(tijolo.img, 0, 0, 64, 64, -15, -15, 30, 30);
+				ctx.restore();
+				//ctx.strokeStyle = "red";
+				//ctx.strokeRect(Math.floor(tijolo2.x/30)*30,Math.floor(tijolo2.y/30)*30, 30, 30);
+				mapa[Math.floor(tijolo2.y/30)][Math.floor(tijolo2.x/30)] = 1;
+			};
+			
+			//INICIALIZACAO TIJOLO2
+			var tijolo2 = [30];
+			tijolo2.img = new Image();
+			tijolo2.img.src = "images/Background/brick2.png";
+			for(var i = 0; i < 30; i++){
+				tijolo2[i] = new Sprite();
+				tijolo2[i].flag = false;
+				tijolo2[i].x = -50;
+				tijolo2[i].y = -50;
+			}
+			
+			//DESENHA TIJOLO2
+			desenharTijolo2 = function(ctx, tijolo3){
+				ctx.save();
+				ctx.translate(tijolo3.x, tijolo3.y);
+				ctx.drawImage(tijolo2.img, 0, 0, 256, 256, -15, -15, 30, 30);
+				ctx.restore();
+				//ctx.strokeStyle = "red";
+				//ctx.strokeRect(Math.floor(tijolo3.x/30)*30,Math.floor(tijolo3.y/30)*30, 30, 30);
+				mapa[Math.floor(tijolo3.y/30)][Math.floor(tijolo3.x/30)] = 1;
+			};
+			
+			//INICIALIZACAO BLOCOS
+			var bloco = [10];
+			for(var i = 0; i < 10; i++){
+				bloco[i] = new Sprite();
+				bloco[i].flag = false;
+				bloco[i].x = -50;
+				bloco[i].y = -50;
+			}
+			
+			//DESENHA BLOCO
+			desenharBloco = function(ctx, bloco){
+				ctx.save();
+				ctx.translate(bloco.x, bloco.y);
+				ctx.drawImage(mapa.img, 132, 102, 24, 22, -15, -15, 45, 32);
+				ctx.restore();
+				//ctx.strokeStyle = "red";
+				//ctx.strokeRect(Math.floor(bloco.x/30)*30,Math.floor(bloco.y/30)*30, 30, 30);
+				mapa[Math.floor(bloco.y/30)][Math.floor(bloco.x/30)] = 1;
+				mapa[Math.floor((bloco.y)/30)-1][Math.floor(bloco.x/30)] = 0;
+				//mapa[Math.floor((bloco.y)/30)+1][Math.floor(bloco.x/30)] = 0;
+				mapa[Math.floor(bloco.y/30)][Math.floor((bloco.x)/30)-1] = 0;
+				mapa[Math.floor(bloco.y/30)][Math.floor((bloco.x)/30)+1] = 0;
+			};
+			
+			//INICIALIZACAO BOTAO
+			var botao = new Sprite();
+			botao.flag = false;
+			botao.press = false;
+			botao.img = new Image();
+			botao.img.src = "images/Background/botao.png";
+			
+			//DESENHA BOTAO
+			botao.desenhar = function(ctx){
+				ctx.save()
+				ctx.translate(botao.x, botao.y);
+				ctx.drawImage(botao.img, 0, 35, 63, 29, -15, 5, 30, 10);
+				ctx.restore();
+			}
+			
+			//INICIALIZACAO PLAYER
+			var player = new Sprite();
+			player.f = 1; player.p = 1;
+			player.img = new Image()
+			player.img.src="images/Chars/people_1.png";
+			player.vivo = true;
+			
+			//CONTROLAR PLAYER
+			player.controlar = function(){
+				if(this.direita){
+					this.ax = -150;
+				}else if(this.esquerda){
+					this.ax =  150;
+				}else{
+					this.ax = 0;
+				}
+				if(this.pulando && this.vy == 0){
+					this.vy = -2*g;
+					this.pulando = false;
+				}
+			};
+			addEventListener("keydown", function(e){
+				e.preventDefault();
+				if(e.keyCode==37){
+					player.direita = true;
+				}
+				if(e.keyCode==39){
+					player.esquerda = true;
+				}
+				if(e.keyCode==38){
+					player.pulando = true;
+				}
+
+			});
+			addEventListener("keyup", function(e){
+				e.preventDefault();
+				if(e.keyCode==37){
+					player.direita = false;
+				}
+				if(e.keyCode==39){
+					player.esquerda = false;
+				}
+				if(e.keyCode==38){
+					player.pulando = false;
+				}
+				
+			});
+			
+			//DESENHAR PLAYER
+			player.desenhar = function(ctx){
+				ctx.save();
+				ctx.translate(this.x, this.y);
+				ctx.rotate(this.angulo+Math.PI/2);
+				
+				if(player.vivo){
+					if(Math.abs(player.vx) < 2){
+						player.vx = 0;
+						ctx.scale(-1,1);
+						player.p=0;
+						player.f=0;
+					}else if(player.vx > 0){
+						player.p=0;
+						ctx.scale(-1,1);
+					}else {
+						player.p=0;
+						ctx.scale(1,1);
+					}
+					player.f+=8*dt
+
+					if(player.f>=3) player.f = 1;
+					
+					if(player.vy<0){
+						player.p = 0;
+						player.f = 1;
+					}else if(player.vy>0){
+						player.p = 0;
+						player.f = 3;
+					}
+				}else{
+					player.p = 2;
+					player.f = 0;
+				}
+				
+				
+				ctx.drawImage(player.img, Math.floor(player.f)*30, player.p*32, 30, 30, -15, -15, 32, 32);
+				
+				ctx.restore();
+				
+				//ctx.strokeStyle = "red";
+				//ctx.strokeRect(this.gx*30,this.gy*30, 30, 30);
+			};
+			
+			//DESENHAR MAPA
+			function desenharMapa(lvl,ctx){
+			
+				for (var l = 0; l < 10; l++) {
+					for (var c = 0; c < 20; c++){
+						if(l == 0){ 
+							ctx.drawImage(mapa.img, 0*10,24*10, 30, 30, c*30, 0, 30, 30);
+						}else{ 
+							if(l == 9){
+								ctx.drawImage(mapa.img, 0*10,236, 10, 10,c*30, 270, 30, 30);
+								} else ctx.drawImage(mapa.img, 0*10,25*10, 30, 30,c*30, l*30, 30, 30);
+							}
+						//ctx.strokeStyle = "white";
+						//ctx.strokeRect(c*30, l*30, 30, 30);
+					}
+				}
+				if(lvl == 1){
+					if(lvlsetup){
+						player.x = 0*30+15;
+						player.y = 8*30+14;
+						
+						bloco[0].flag = true;
+						bloco[0].x = 5*30+15;
+						bloco[0].y = 6*30+14;
+						
+						bloco[1].flag = true;
+						bloco[1].x = 1*30+15;
+						bloco[1].y = 8*30+15;
+						
+						var aux = 0;
+						for(var i = 0; i < 5; i++){
+							for(var n = 0; n < 2; n++){
+								tijolo[aux].flag = true;
+								tijolo[aux].x = (i+13)*30+15;
+								tijolo[aux].y = (n+7)*30+15;
+								aux++;
+							}
+						}
+						for(var i = 0; i < 2; i++){
+							tijolo[aux].flag = true;
+							tijolo[aux].x = (14)*30+15;
+							tijolo[aux].y = (i+4)*30+15;
+							aux++;
+						}
+						
+						tijolo[aux].flag = true;
+						tijolo[aux].x = 17*30+15;
+						tijolo[aux].y = 6*30+15;
+						aux++;
+						
+						for(var i = 0; i < 6; i++){
+							tijolo[aux].flag = true;
+							tijolo[aux].x = (4+i)*30+15;
+							tijolo[aux].y = (7)*30+15;
+							aux++;
+						}
+ 						
+						spikes.flag = true;
+						spikes.x = 18*30+15;
+						spikes.y = 8*30+15;
+						
+						lvlsetup = false;
+					}
+					
+					//ENFEITES
+					ctx.drawImage(mapa.img, 34,13, 30, 20, 2*30, 5*30, 60, 50);
+					ctx.drawImage(mapa.img, 132,58, 26, 42, 10*30+10, 7*30+4, 45, 62);
+					ctx.drawImage(mapa.img, 30,100, 30, 40, 18*30-15, 7*30, 60, 40);
+					ctx.drawImage(mapa.img, 67,5, 26, 40, 16*30, 5*30, 30, 60);
+					
+				}else{
+				
+					if(lvlsetup){
+					
+						player.vivo = true;
+						player.x = 3*30+15;
+						player.y = 8*30;
+						
+						botao.flag = true;
+						botao.x = 1*30+15;
+						botao.y = 8*30+15;
+						
+						spikes.flag = true;
+						spikes.x = 18*30+15;
+						spikes.y = 7*30+15;
+						
+						bloco[0].flag = true;
+						bloco[0].x = 9*30+15;
+						bloco[0].y = 3*30+15;
+						
+						aux = 0;
+						
+						for(var i = 0; i < 7; i++){
+							tijolo[aux].flag = true;
+							tijolo[aux].x = (13+i)*30+15;
+							tijolo[aux].y = (8)*30+15;
+							aux++
+						}
+						
+						aux = 0;
+						for(var i = 0; i < 4; i++){
+							tijolo2[aux].flag = true;
+							tijolo2[aux].x = (16)*30+15;
+							tijolo2[aux].y = (7-i)*30+15;
+							aux++
+						}
+						
+						tijolo2[aux].flag = true;
+						tijolo2[aux].x = 9*30+15;
+						tijolo2[aux].y = 4*30+15;
+						
+						
+						lvlsetup = false;
+					}
+					if(botao.press){
+						for(var i = 0; i < 30; i++){
+							if(tijolo2[i].flag){
+								tijolo2[i].flag = false;
+								mapa[Math.floor(tijolo2[i].y/30)][Math.floor(tijolo2[i].x/30)] = 0;
+							}
+						}
+					}else{
+						for(var i = 0; i < 5; i++){ //numero de tijolos2 no cenario
+							tijolo2[i].flag = true;
+						}
+					} 
+					
+					//ENFEITES
+					ctx.drawImage(mapa.img, 30,100, 30, 40, 18*30-15, 6*30, 60, 40);
+					ctx.drawImage(mapa.img, 100,150, 30, 40, 14*30, 6*30, 45, 60);
+					ctx.drawImage(mapa.img, 138,18, 12, 25, 8*30, 7*30, 23, 59);
+					ctx.drawImage(mapa.img, 34,13, 30, 20, 2*30, 5*30, 60, 50);
+					
+					
+				}
+			}
+			
+			//PASSO
+			
+			var lvl = 2;
+			var passoudefase = false;
+			var lvlsetup = true;
+			soundlib.play("fundo");
+			
+			setInterval(passo, 1000/fps);
+			
+			function passo(){
+				
+
+				
+				desenharMapa(lvl,ctx);
+				
+				//CONTROLE BOTAO
+				if(botao.flag){
+					botao.desenhar(ctx);
+					
+					if(player.colidiuCom(botao)){
+						botao.press = true;
+						//console.log("true");
+						
+					}else{
+						botao.press = false;
+						//console.log("false");
+					} 
+				}
+				
+				//CONTROLE BLOCO
+				for(var i = 0; i < 10; i++){
+					if(bloco[i].flag){
+						desenharBloco(ctx, bloco[i]);
+						bloco[i].moverCartGrid(dt,200,mapa);
+						
+						if(player.colidiuCom(bloco[i])){
+							if(player.vx > 0 && Math.abs((player.y - bloco[i].y)) < 2) bloco[i].x = player.x+30;
+							if(player.vx < 0 && Math.abs((player.y - bloco[i].y)) < 2) bloco[i].x = player.x-30; 
+						}
+						
+						for(var n = 0; n < 30; n++){
+							if(tijolo[n].flag){
+								if(bloco[i].colidiuCom(tijolo[n]) && Math.abs((player.y - tijolo[i].y)) < 3 && Math.abs(player.x - tijolo[n].x) < 62){
+									
+									if(player.vx > 0){
+										bloco[i].x = bloco[i].x - 3;
+										player.x = player.x - 3;
+									}
+									if(player.vx < 0){
+										bloco[i].x = bloco[i].x + 3;
+										player.x = player.x + 3;
+										console.log("AQUI");
+									}
+								}
+							}
+						}
+						
+						if(bloco[i].colidiuCom(botao)){
+							botao.press = true;
+						}
+					}
+				}
+				//CONTROLE TIJOLO
+				for(var i = 0; i < 30; i++){
+					if(tijolo[i].flag){
+						desenharTijolo(ctx, tijolo[i]);
+						
+						if(player.colidiuCom(tijolo[i]) && Math.abs((player.y - tijolo[i].y)) < 28){
+							if(player.vx > 0){
+								player.x = player.x - 3;
+							}
+							if(player.vx < 0){
+								player.x = player.x + 3;
+							}
+						}
+					}
+				}
+				//CONTROLE TIJOLO2
+				for(var i = 0; i < 30; i++){
+					if(tijolo2[i].flag){
+						desenharTijolo2(ctx, tijolo2[i]);
+						
+						if(player.colidiuCom(tijolo2[i]) && Math.abs((player.y - tijolo2[i].y)) < 28){
+							if(player.vx > 0){
+								player.x = player.x - 3;
+							}
+							if(player.vx < 0){
+								player.x = player.x + 3;
+							}
+						}
+					}
+				}
+				
+				//CONTROLE SPIKES
+				if(spikes.flag) spikes.desenhar(ctx);
+				if(player.colidiuCom(spikes)){
+					soundlib.play("dying");
+					player.vivo = false;
+					player.vx = 0;
+					player.vy = 0;
+					player.ax = 0;
+					setTimeout(function() {
+						passoudefase = true;
+						
+						for(var i = 0; i < 30; i++){
+							tijolo[i].flag = false;
+							tijolo[i].x = -50;
+							tijolo[i].y = -50;
+						}
+						for(var i = 0; i < 30; i++){
+							tijolo2[i].flag = false;
+							tijolo2[i].x = -50;
+							tijolo2[i].y = -50;
+						}
+						for(var i = 0; i < 10; i++){
+							bloco[i].flag = false;
+							bloco[i].x = -50;
+							bloco[i].y = -50;
+						}
+						botao.flag = false;
+						spikes.flag = false;
+						
+						lvl = 2;
+						lvlsetup = true;
+
+					}, 2000);
+				}
+				
+				//CONTROLE PLAYER
+				if(player.vivo) player.controlar();
+				player.moverCartGrid(dt,200, mapa);
+				player.desenhar(ctx);
+			}
+		
+		</script>
+	</body>
+</html>

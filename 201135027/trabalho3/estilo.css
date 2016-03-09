@@ -1,0 +1,225 @@
+h1{
+                color:#EEEE00;
+                font-family: Arial;
+                page-break-after:always;
+                text-indent:25px;
+}
+h2{
+                color:#FF3333;
+                font-family:Arial;
+                page-break-after:always;
+                text-indent:30px;
+				                text-decoration:underline
+
+}
+h3{
+                color:#CC0000;
+                font-family:"Andalus", Book Antiqua, Arial;
+                font-style:italic;
+                page-break-after:always;
+                text-indent:30px;
+                text-decoration:underline
+}
+ 
+p{
+                color:black;
+                font-size: 12pt;
+                font-family:"Tahoma", Times New Roman;
+                text-indent:50px
+}
+a:link{
+                color:#EE0000;
+                font-weight:bold;
+                text-decoration:underline  
+}
+a:visited{
+                color:#EE0000;
+                font-weight:normal;
+                text-decoration:underline;
+                text-transform:capitalize
+}
+a:active{
+                color:yellow;
+                font-weight:bold;
+                text-decoration:underline;
+                text-transform:capitalize
+}
+a:hover{
+                color:black;
+                text-decoration:underline;
+                text-transform:capitalize;
+                font-family:"Arial Black";
+                cursor:pointer;
+                 
+}
+table{
+                background-image:url('imagens/tfundo.png')
+}
+body{
+                background-image:url('grey-background-for-site11.jpg')
+				
+                 
+}
+legend{
+                font-family:Andalus;
+                font-style:italic
+}
+ 
+.container {
+
+margin: 0px auto 0px auto;
+text-align: center;
+
+}
+ 
+.conteudo{
+background-color:#FFFFEA;
+}
+ 
+ 
+ 
+ 
+#menu {
+font-family:"Book Antiqua", tahoma, verdana;
+}
+#menu ul.barra {
+width: 100%;
+padding: 0;
+margin: 10px 0px 5px 0px;
+float:left;
+background: url(imagens/barra.png);
+background-size: 100% 100%;
+font-size: larger;
+}
+#menu ul.barra li.barra { list-style-type: none;
+display: inline;
+cursor: pointer;
+float: left;
+}
+#menu ul.barra li.barra a.barra {
+padding: 10px;
+float:left;
+color: #000000;
+text-decoration: none;
+text-align: center;
+border-right: 1px solid white;
+}
+#menu ul.barra li.barra a.barra:hover {
+background: url(imagens/barra.png);
+background-size: 100% 100%;
+font-weight: bold;
+}
+ 
+#menu ul.barra li.barra ul.bloco {
+list-style: none;
+font-size: medium;
+display: none;
+background: url(imagens/barra.png);
+background-size: 100% 100%;
+position: absolute !important;
+z-index: 5;
+margin: 39px 0px 0px 5px;
+padding: 0px 5px 15px 5px;
+}
+#menu ul.barra li.barra:hover ul.bloco {
+display: block;
+}
+#menu ul.barra li.barra ul.bloco li.bloco {
+position:relative !important;
+top: 10px !important;
+padding: 2px 10px 10px 2px;
+}
+ 
+#menu ul.barra li.barra ul.bloco li.bloco a.bloco {
+color: #000000;
+text-decoration: none;
+}
+#menu ul.barra li.barra ul.bloco li.bloco:hover {
+background: url(imagens/barra.png);
+background-size: 100% 100%;
+font-weight: bold;
+}
+.rodape{
+                font-size:8pt;
+                font-family:"Courier New", Courier, Book Antiqua;
+                color:black;
+                background-color:#FBFFAA;
+                filter: alpha(opacity=40);
+                opacity: 0.4;
+                text-align:center;
+}
+.menulateral {
+float: left;
+width: 200px;
+ 
+background-image:url('imagens/menulateral.png');
+background-size: 100% 100%;
+padding: 10px;
+margin: 0px 0px 20px 15px;
+}
+.menulateral p.titulo{
+                font-family:"Tahoma", Arial;
+                font-size:14pt;
+                text-decoration:underline;
+                font-weight:bold;
+                color:black;
+}
+.menulateral ul.link{
+                font-family:"Tahoma", Arial;
+                font-size:12pt;
+                color:orange;
+                font-style:italic;
+                 
+}
+.menulateral a.menu{
+                color:orange;
+}
+.menulateral a.menu:hover{
+                color:#663300;
+}
+#index{
+                position:absolute;
+}
+.e1{
+                margin:200px auto auto 210px;
+                z-index:5;
+}
+.e2{
+                margin:150px auto auto 160px;
+                z-index:4
+}
+.e3{
+                margin:100px auto auto 110px;
+                z-index:3
+}
+.e4{
+                margin:50px auto auto 60px;
+                z-index:2
+}
+.e5{
+                margin:0px auto auto 10px;
+                z-index:1
+}
+#index:hover{
+                z-index:6 !important
+}
+#pop { 
+                display:none;
+                position:absolute;
+                top:50%;
+                left:50%;
+                margin-left:-100px;
+                margin-top:0px;
+                padding:10px;
+                width:300px;
+                height:200px;
+                border:1px solid gray;
+                background-color:#FFFFEA;
+}
+dt{
+                font-style:italic;
+                font-weight:bold;
+}
+dd{
+                font-style:italic;
+}
