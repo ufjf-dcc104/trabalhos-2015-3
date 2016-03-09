@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, user-scalable=0,minimum-scale=1.0, maximum-scale=1.0"/>
+		<title>Plataforma</title>
+		<script src="Sprite.js"></script>
+	</head>
+	<body>
+		<h1>Plataforma</h1>
+		<canvas width="600" height="300">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	var mapa = [];
+	mapa.img = new Image();
+	mapa.img.src = "grass.png";
+
+	for (var l = 0; l < 10; l++) 
+	{
+		mapa[l] = [];
+		for (var c = 0; c < 20; c++)
+		{
+			mapa[l][c] = 0;
+			if(l==9) mapa[l][c] = 1;
+
+			if(Math.random()<0.20)
+			{
+				mapa[l][c] = 1;
+			}
+		}
+	}
+
+
+	var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+
+	var time=0;
+
+	var Artesouro = [];
+	var tiros = [];
+	var trocaFase = 1;
+	var faseAtual =1;
+	var gold = 0;
+	var tempo = 0;
+	var vida = 3;
+	var jogo = true;
+
+	var inimigo = [];
+
+	var pc = new Sprite();
+	pc.f = 1; pc.p = 1;
+	pc.img = new Image()
+	pc.img.src="Aki-Sheet.png";
+
+	pc.tiro = false;
+	pc.intervaloTiro = 0;
+
+	var ceu  = new Image();
+	ceu.src = "layer_1.png";
+
+	var boom = new Sprite();
+	boom.x = -100;
+	boom.img = new Image();
+	boom.img.src = "explosion17.png"
+
+	var coin_vida = new Sprite();
+	coin_vida.x = (Math.floor((Math.random() * 19) + 1))*30;
+	coin_vida.y = (Math.floor((Math.random() * 7) + 2))*30;
+	coin_vida.f = 1;
+	coin_vida.w = 30;
+	coin_vida.h = 30;
+	coin_vida.img = new Image();
+	coin_vida.img.src = "coin_vida.png";
+
+
+	var x = 1;
+
+
+	pc.controlar = function(){
+		if(this.direita){
+			this.ax = -150;
+		}else if(this.esquerda){
+			this.ax =  150;
+		}else{
+			this.ax = 0;
+		}
+		if(this.pulando && this.vy == 0){
+			this.vy = -3.25*g;
+			this.pulando = false;
+		}
+	};
+
+		
+	addEventListener("keydown", function(e){
+		e.preventDefault();
+		if(e.keyCode==37){
+			pc.direita = true;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = true;
+		}
+		if(e.keyCode==38){
+			pc.pulando = true;
+		}
+		if(e.keyCode==65){
+			pc.tiro = true;
+
+		}
+
+	});
+	addEventListener("keyup", function(e){
+		e.preventDefault();
+		if(e.keyCode==37){
+			pc.direita = false;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = false;
+		}
+		if(e.keyCode==38){
+			pc.pulando = false;
+		}
+		if(e.keyCode==32){
+			if(jogo==false){
+			jogo = true;
+			vida = 3;
+			faseAtual = 1;
+			}
+		}
+		if(e.keyCode==65){
+			pc.tiro = false;
+
+		}
+		
+	});
+	
+
+	setInterval(passo, 1000/fps);
+	function passo(){
+		if(vida >0 && jogo == true)
+		{
+
+			ctx.drawImage (ceu, 0,0, 600,300);
+			if(x=1) desenharMapa(); 
+			x=0;
+			pc.controlar();
+			pc.moverCartGrid(dt,200, mapa);
+			pc.desenhar(ctx);
+			time++;
+			tempo++;
+
+			if(coin_vida.f>=20) {coin_vida.f = 0;}
+			coin_vida.f++;
+			ctx.drawImage(coin_vida.img, 0,Math.floor(coin_vida.f/5)*44, 40, 44, coin_vida.x+5, coin_vida.y+5, coin_vida.w-10, coin_vida.h-10);
+
+			if(pc.colidiuCom(coin_vida))
+			{
+				vida ++;
+				coin_vida.x=1000;
+				coin_vida.y=1000;
+			}
+
+			if(time == 180)
+			{
+				var ini = new Sprite();
+				ini.w = 50;
+				ini.h = 50;
+				ini.x = Math.random() * (600);
+				ini.y = 0;
+				ini.f = 1;
+				ini.p = 1;
+				ini.velocidade = -180;
+				inimigo.push(ini);
+				time=0;
+			}
+
+			if(pc.tiro && pc.intervaloTiro<=0){
+				var tiro = new Sprite();
+				tiro.w = 5;
+				tiro.h = 5;
+				if(pc.vx>=0){
+					tiro.velocidade = 180;
+				} else{
+					tiro.velocidade = -180;
+				}
+				tiro.x = pc.x+pc.w/2-tiro.w/2;
+				tiro.y = pc.y;
+				tiros.push(tiro);
+				pc.intervaloTiro = 1; 		
+				
+			}
+			pc.intervaloTiro -= 1*dt;
+
+			tiros.forEach(function(t)
+			{
+				t.mover(dt,0);	
+				t.desenhar(ctx);
+				if(t.y<0 || t.y > tela.height || t.x<0 || t.x> tela.width){
+					tiros.splice(tiros.indexOf(t), 1);
+				}
+				inimigo.forEach(function(i)
+				{
+					if(t.colidiuCom(i)){ // tiro colidiu com inimigo
+						boom.x = i.x;
+						boom.y = i.y;
+						tiros.splice(tiros.indexOf(t),1);
+						inimigo.splice(inimigo.indexOf(i),1);
+					}
+
+				})
+			});
+
+			if(trocaFase==1)
+			{
+				for(var cont=1;cont<=faseAtual;cont++)
+				{
+					var xTes = Math.floor((Math.random() * 19) + 1);
+					var yTes =  Math.floor((Math.random() * 7) + 2);
+					var tesouro = new Sprite();
+					tesouro.x=xTes*30;
+					tesouro.y=yTes*30;
+					Artesouro.push(tesouro);				
+					trocaFase=0;
+					coin_vida.x = (Math.floor((Math.random() * 19) + 1))*30;
+					coin_vida.y = (Math.floor((Math.random() * 7) + 2))*30;
+
+				}
+			}
+
+			inimigo.forEach(function(i)
+			{
+				i.controlar();
+				i.moverCartGrid(dt,200, mapa);
+				if(i.colidiuCom(pc))
+				{
+					vida--;
+					boom.x = pc.x;
+					boom.y = pc.y;
+					inimigo.splice(inimigo.indexOf(i),1);
+
+				}
+				i.img = new Image()
+				i.img.src="Old enemies.png";
+				i.desenharInimigo(ctx);
+
+			});
+			
+			Artesouro.forEach(function(tes)
+				{
+				
+					if(tempo>=4*5) tempo =0;
+					var coin = new Image();
+					coin.src = "coins.png";
+					
+					ctx.drawImage(coin, 0,Math.floor(tempo/5)*44, 40, 44, tes.x+5, tes.y+5, tes.w-10, tes.h-10);
+					
+					if(tes.colidiuCom(pc)){
+						gold = gold + 1;
+						Artesouro.splice(Artesouro.indexOf(tes),1);
+
+					}
+					if(gold == faseAtual)
+					{
+						faseAtual = faseAtual +1;
+						trocaFase = 1;
+						gold = 0;
+						desenharNovoMapa();
+					}
+				});
+			
+			boom.desenhar(ctx);
+			ctx.font = "20px Arial";
+			ctx.fillStyle = ("Black");
+			ctx.fillText("Vidas:" +vida,30,30);
+			ctx.fillText("Fase:" +faseAtual,30,50);
+		}
+		else{
+			ctx.font = "20px Arial";
+			ctx.fillStyle = ("Black");
+			ctx.fillText("Game Over! Aperte 'espaço' para jogar novamente",100,150);
+			jogo = false;
+			faseAtual = 1;
+			gold=0;
+
+		}
+
+	}
+
+	function desenharMapa(){
+
+		for (var l = 0; l < 10; l++) 
+		{
+			for (var c = 0; c < 20; c++)
+			{
+				if(mapa[l][c]==1)
+				{
+					ctx.drawImage(mapa.img,c*30, l*30, 30, 15);
+				}
+			
+			}
+
+		}
+		
+	}
+	function desenharNovoMapa(){
+		for (var l = 0; l < 10; l++) 
+		{
+			mapa[l] = [];
+			for (var c = 0; c < 20; c++)
+			{
+				mapa[l][c] = 0;
+				if(l==9) mapa[l][c] = 1;
+
+				if(Math.random()<0.20)
+				{
+					mapa[l][c] = 1;
+				}
+			}
+		}
+		for (var l = 0; l < 10; l++) 
+		{
+			for (var c = 0; c < 20; c++)
+			{
+				if(mapa[l][c]==1)
+				{
+					ctx.drawImage(mapa.img, 2*32,0*32, 32, 32, c*30, l*30-22, 30, 30);
+				}
+			
+			}
+
+		}
+		
+	}
+	pc.desenhar = function(ctx){
+					ctx.save();
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+
+					if(Math.abs(pc.vx) < 2){
+						pc.vx = 0;
+						ctx.scale(2,2);
+						pc.p=1;
+					}else if(pc.vx > 0){
+						pc.p=2;
+						ctx.scale(2,2);
+					}else {
+						pc.p=2;
+						ctx.scale(-2,2);
+					}
+					pc.f+=8*dt
+					
+					
+					switch(pc.p){
+						case 1: if(pc.f>=5) pc.f = 1;
+						break;
+						case 2: if(pc.f>=7) pc.f = 1;
+						break;
+					}
+					if(pc.vy<0){
+						pc.p = 3;
+						pc.f = 1;
+					}else if(pc.vy>0){
+						pc.p = 3;
+						pc.f = 2;
+					}
+					
+					ctx.drawImage(pc.img, Math.floor(pc.f)*16, pc.p*16, 16, 16, -8, -8, 16, 16	);
+
+					ctx.restore();
+					
+				};
+	
+	boom.desenhar = function(ctx){
+					boom.s = boom.s||0;
+					ctx.save();
+					ctx.translate(this.x, this.y);
+					ctx.rotate(this.angulo+Math.PI/2);
+					boom.s+=30*dt;
+					var l = Math.floor(boom.s) % 5;
+					var c = Math.floor(boom.s / 5 );
+					if(boom.s>25){
+						boom.s = 0;
+						boom.x = -100;
+						boom.y = -100;
+					}
+					ctx.drawImage(boom.img, l*64, c*64, 64, 64,-32, -32, 64, 64	);
+
+					ctx.restore();
+
+	};
+
+</script>
+</html>
