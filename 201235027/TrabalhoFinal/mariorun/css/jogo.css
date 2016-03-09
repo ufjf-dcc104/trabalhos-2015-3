@@ -1,0 +1,22 @@
+html {
+	min-width: 100%;
+	min-height: 100%;
+}
+
+body {
+	padding-top: 51px;
+}
+
+.center {
+    width:700px;
+    float: none;
+    margin-left: auto;
+    margin-right: auto;
+    min-height: 570px;
+    background-color: #FFFFFF;
+}
+
+#game {
+    margin-left: 50px;
+    margin-top: 80px;
+}
