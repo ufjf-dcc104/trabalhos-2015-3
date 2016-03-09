@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Space Shooter</title>
+		<script src="Sprite.js"></script>
+	</head>
+	<body>
+		<h1>Space Shooter</h1>
+		<canvas width="400" height="500">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+
+	var fps = 60;
+	var g = 60;
+	var dt = 1/fps;
+	var i = 0;
+	var energia = 5;
+	var pontos = 0;
+	var ship = new Image();
+	ship.src = "ship.png";
+	var ship2 = new Image();
+	ship2.src = "ship2.png";
+	var bg = new Image();
+	bg.src = "bg.png";
+	var slowdown = false;
+	var slowdown2 = false;
+	var posicao;
+	
+	
+
+	var nave = new Sprite();
+	nave.tiro = false;
+	nave.intervaloTiro = 0;
+	
+	var tiros = [];
+	var inimigos = [];
+
+	addEventListener("keydown", function(e){
+		if(e.keyCode==37){
+			nave.ax = -300;
+		}
+		if(e.keyCode==39){
+			nave.ax = 300;
+		}
+		if(e.keyCode==38){
+			nave.ay = -300;
+		}
+		if(e.keyCode==40){
+			nave.ay = 300;
+		}
+		if(e.keyCode==32){
+			nave.tiro = true;
+		}
+	});
+	addEventListener("keyup", function(e){
+		
+		if(e.keyCode==32){
+			nave.tiro = false;
+		}
+		if(e.keyCode==37){
+			nave.ax = 0;
+		}
+		if(e.keyCode==39){
+			nave.ax = 0;
+		}
+		if(e.keyCode==38){
+			nave.ay = 0;
+		}
+		if(e.keyCode==40){
+			nave.ay = 0;
+		}
+	});
+
+	setInterval(passo, 1000/fps);
+	function passo(){
+		
+		if(nave.vx>150){
+			nave.vx=150;
+		}
+		if(nave.vx<-150){
+			nave.vx= -150;
+		}
+		if(nave.vy>150){
+			nave.vy = 150;
+		}
+		if(nave.vy<-150){
+			nave.vy = -150;
+		}
+		/*if (slowdown==true){
+			if(nave.vx>0){
+				nave.ax = -300;
+				if(nave.vx <0){
+					nave.vx = 0;
+					nave.ax = 0;
+					slowdown = false;
+				}
+			}
+			if(nave.vx<0){
+				nave.ax = 300;
+				if(nave.vx >0){
+					nave.vx = 0;
+					nave.ax = 0;
+					slowdown = false;
+
+				}
+			}
+		}*/
+		if(energia > 0){
+		ctx.drawImage(bg, 0, 0, tela.width, tela.height);
+		/*if(i>=1200){
+			i = i + 3;
+		} else {
+			if(i >= 600){
+				i = i + 2;
+			}
+			else{
+				i++;
+			}
+		}*/
+		//i = i + 1 + 1*((i-i%1200)/1200);
+		i++
+		//ctx.fillStyle = "black";
+		//ctx.fillRect(0,0, tela.width, tela.height);	
+		nave.mover(dt,0);
+		if(nave.tiro && nave.intervaloTiro<=0){
+			var tiro = new Sprite();
+			tiro.w = 4;
+			tiro.h = 20;
+			tiro.vy = -180;
+			//tiro.angulo = nave.angulo;
+			tiro.x = nave.x+nave.w/2;
+			tiro.y = nave.y;
+			tiros.push(tiro);
+			nave.intervaloTiro = 1/2; // 5 tiros por segundo
+		}
+		if(nave.x <= 5 ){
+			nave.vx = 0;
+			nave.x = 5;
+		}
+		if(nave.x + nave.w + 5 >= tela.width){
+			nave.vx = 0;
+			nave.x = tela.width - nave.w - 5;
+		}
+		if(nave.y <= 5 ){
+			nave.vy = 0;
+			nave.y = 5;
+		}
+		if(nave.y + nave.h + 5 >= tela.height){
+			nave.vy = 0;
+			nave.y = tela.height - nave.h -5;
+		}
+		if(i%60==0){
+			var inimigo = new Sprite();
+			inimigo.w = 50;
+			inimigo.h = 50;
+			inimigo.vy = 200;
+			//tiro.angulo = nave.angulo;
+			if(i<=1500){
+			inimigo.x = 50+(Math.floor(i/300))*50;
+			inimigo.y = -100;
+			inimigo.vx = Math.random()*80;
+			inimigos.push(inimigo);
+			}
+			if(i>1500 && i<=2250){
+			inimigo.x = 50;
+			inimigo.y = -100;
+			inimigo.vx = 70+Math.random()*30;
+			inimigos.push(inimigo);
+			}
+			if(i>2250 && i<=3000){
+			inimigo.x = 350;
+			inimigo.y = -100;
+			inimigo.vx = -70-Math.random()*30;
+			inimigos.push(inimigo);
+			}
+			if(i>3000 && i<=3900){
+			if((Math.floor(i/60))%2==0){
+			inimigo.x = 50;
+			inimigo.y = -100;
+			inimigo.vx = 90;}
+			else{
+			inimigo.x = 350;
+			inimigo.y = -100;
+			inimigo.vx = -90;
+			}
+			inimigos.push(inimigo);
+			}
+			if(i>3900){
+			inimigo.x = 50+Math.random()*200;
+			inimigo.y = -100;
+			inimigo.vx = Math.random()*50;
+			inimigos.push(inimigo);
+			}
+
+			//nave.intervaloTiro = 1/5; // 5 tiros por segundo
+		}
+		nave.intervaloTiro -= 1*dt;
+		tiros.forEach(function(t){
+			t.mover(dt,0);	
+			//t.desenhar(ctx);
+			var lazer = new Image();
+			lazer.src = "laserBlue01.png";
+			ctx.drawImage(lazer, t.x, t.y, t.w, t.h);
+			if(t.y<0){
+				tiros.splice(tiros.indexOf(t), 1);
+			}
+			inimigos.forEach(function(enemy){
+				if(t.colidiuCom(enemy)){
+					tiros.splice(tiros.indexOf(t),1);
+					inimigos.splice(inimigos.indexOf(enemy),1);
+					pontos = pontos + 10;
+				}
+			});
+		});
+		inimigos.forEach(function(ini){
+			ini.mover(dt,0);	
+			//ini.desenhar(ctx);
+			var ship2 = new Image();
+			ship2.src = "enemyBlack1.png";
+			ctx.drawImage(ship2, ini.x, ini.y, ini.w, ini.h);
+			if(ini.y>tela.height){
+				inimigos.splice(inimigos.indexOf(ini), 1);
+				energia--;
+			}
+			if(ini.colidiuCom(nave)){
+					//inimigos.splice(tiros.indexOf(t),1);
+					inimigos.splice(inimigos.indexOf(ini),1);
+					energia--;
+					console.log(+energia);
+				}
+		});
+
+		//nave.desenhar(ctx);
+		if(nave.vx<=0){
+			posicao = Math.floor(-nave.vx/20);
+			ctx.drawImage(ship, posicao*100, 0, 100, 100,nave.x, nave.y, nave.w, nave.h);
+		}	else{
+			posicao = Math.floor(nave.vx/20);
+			ctx.drawImage(ship2, (8-posicao)*100, 0, 100, 100,nave.x, nave.y, nave.w, nave.h);
+		}
+		ctx.font = "30px Arial";
+		ctx.fillStyle = ("White");
+		ctx.fillText("Vidas:" +energia,30,30);
+		ctx.fillText("Pontos:" +pontos,30,60);
+		}
+		else{
+			ctx.font = "30px Arial";
+			ctx.fillStyle = ("White");
+			ctx.fillText("Game Over!",100,250);
+		}
+	}
+
+</script>
+</html>
