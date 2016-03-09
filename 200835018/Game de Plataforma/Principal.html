@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Plataforma</title>
+		<script src="Sprite.js"></script>
+		<script src="Assets_Sound.js"></script>
+	</head>
+	<body>
+		<canvas width="900" height="870">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+<script>
+
+	/*Configurando as imagens do game------------------------------------------------------------------------------------*/
+
+	function BancoDeImagens(){
+	  this.imagens = {};
+	  
+	  this.add = function(nome,url){
+		  this.imagens[nome] = new Image();
+		  this.imagens[nome].src = url;
+	  };
+	  
+	  this.desenhaXY = function(ctx,nome,x,y,dw,dh){
+		  ctx.drawImage(this.imagens[nome],x,y,dw,dh);
+	  };
+
+	  this.desenha = function(ctx,nome,x,y,w,h,dx,dy,dw,dh){
+		  ctx.drawImage(this.imagens[nome],x,y,w,h,dx,dy,dw,dh);
+	  };
+	} 
+
+	var imagens = new BancoDeImagens();
+	
+	imagens.add("plataforma_movel","Platform256.png"); 
+	imagens.add("plataforma_geral","720px-Brick_Block.png");
+	imagens.add("plataforma_degrau","item_box_crate_1.png");	
+	imagens.add("plataforma_gelo","IceBox.png");	
+	imagens.add("plataforma_master","GoldbrickblockNSMB2.png"); 
+	imagens.add("plataforma_chao","k99ctl2.png"); 
+	imagens.add("plataforma_sincrona","BlocoInvisivel.png");
+	imagens.add("personagem","Old hero.png");  
+	imagens.add("princesa","Sprites-PrincessVamped.gif");
+	imagens.add("inimigo1","monster_gorgon_magic1.gif"); 
+	imagens.add("inimigo1_Esp","monster_gorgon_magic_Espelho.gif"); 
+	imagens.add("inimigo2","zxenemies.png");
+	imagens.add("inimigo2_Esp","zxenemies_Espelho.png");
+	imagens.add("inimigo3","mmm-mmx3iceguy.gif");  
+	imagens.add("inimigo3_Esp","mmm-mmx3iceguy_Espelho.gif");  
+	imagens.add("boss_image","38693.gif");  
+	imagens.add("achou_princesa","Hod8HNJ.png"); 
+	imagens.add("morte_inimigos","explosion_01_strip13.png");  
+	imagens.add("base_mola","baseMola.png"); 
+	imagens.add("mola","spring.png"); 
+	imagens.add("missao_cumprida","1_fff69c51-5a4d-409e-b644-60268ee1570f_large.gif"); 
+	imagens.add("espetos","spikes10.gif"); 
+	imagens.add("tiros_boss","MegaManXSprite.png");
+	
+	imagens.add("background","sewer.png");
+	
+	/*------------------------------------------------------------------------------------------------------------------*/
+
+	var tela = document.getElementsByTagName("canvas")[0];
+	var ctx = tela.getContext("2d");
+	
+	var mapa = [];
+	
+	for (var l = 0; l < 29; l++) {
+		mapa[l] = [];
+		
+		for (var c = 0; c < 32; c++){
+		
+			/*Representa o fundo do game. Esses blocos "invisíveis", não possuem colisão com o personagem.*/
+			mapa[l][c] = 0;
+			
+			/*Cria a plataforma que será o chão do game.*/
+			if(l == 28) mapa[l][c] = 1;
+			
+			/*Cria as plataformas (fixas) gerais do game.*/
+			
+			//First floor.
+			if(l == 25 && ((c >= 4 && c <= 22) || (c >= 27 && c <= 29))) mapa[l][c] = 2;
+			
+			//Second floor.
+			if(l == 22 && ((c >= 4 && c <= 7) || (c >= 11 && c <= 13) || (c == 18) || (c == 22))) mapa[l][c] = 2;
+			
+			//Third floor.
+			if(l == 19 && ((c >= 24 && c <= 26) || (c >= 0 && c <= 2))) mapa[l][c] = 2;
+			
+			//Fifth floor.
+			if(l == 12 && ((c >= 21 && c <= 22) || (c >= 12 && c <= 17) || (c >= 7 && c <= 8))) mapa[l][c] = 2;
+			
+			//Sixth floor.
+			if(l == 10 && ((c >= 0 && c <= 2))) mapa[l][c] = 2;
+			
+			//Seventh floor.
+			if(l == 9 && ((c == 5) || (c >= 9 && c <= 19))) mapa[l][c] = 2;
+			
+			//Final floor.
+			if(l == 6 && ((c >= 18 && c <= 20) || (c >= 2 && c <= 14))) mapa[l][c] = 5;
+			
+			/*Cria a plataforma Síncrona:*/
+			if(l == 9 && (c == 22)) mapa[l][c] = 6;
+			if(l == 9 && (c == 26)) mapa[l][c] = 0;
+			if(l == 7 && (c == 29)) mapa[l][c] = 6;
+			if(l == 6 && (c == 25)) mapa[l][c] = 6;
+			
+			/*Cria as escadas do game.*/
+			
+			//Primeira escada.
+			if(l == 27 && c == 24 || l == 26 && c == 25 || l == 25 && c == 26) mapa[l][c] = 3;
+			
+			//Segunda escada.
+			if(l == 25 && c == 3 || l == 24 && c == 2 || l == 23 && c == 1 || l == 22 && c == 0) mapa[l][c] = 3;
+			
+			//Terceira escada.
+			if(l == 22 && c == 26 || l == 21 && c == 28 || l == 20 && c == 29) mapa[l][c] = 3;
+			
+			//Quarta escada.
+			if(l == 18 && c == 0 || l == 17 && c == 1) mapa[l][c] = 3;
+			
+			//Última escada.
+			if(l == 4 && c == 0 || l == 3 && c == 1) mapa[l][c] = 3;
+			
+			/*Cria a plataforma que será a parte final do game.*/
+			if(l == 2 && ( (c == 2) || (c == 6) || (c == 10) || (c == 14 ) ||  (c == 18) || (c == 22) || (c >= 26 && c <= 31))) mapa[l][c] = 4;
+		}
+	}
+
+	var fps = 60;
+	var g = 60;
+	var gPersonagemAndarNaGrid = 200;
+	var dt = 1/fps;
+	
+	var esta_no_gelo = false;
+	var esta_na_plataforma_sincrona = false;
+	var esta_no_espeto = false;
+	var terminouAnimacao = true;
+	var personagemMorreu = false;
+	var tempoPersonagemParadoAoMorrer = 0;
+	var frequenciaPersonagemMorrendo = 0;
+	var esperandoMusicaMortePCTerminar = false;
+	var tocar_musica_morte_espeto = true;
+	
+	/*Configurando os sons do game:---------------------------------------------------------------------------------------*/
+	
+	var sonsVolume = {};
+	sonsVolume["musica_stage"] = 0.3;
+	sonsVolume["pulo"] = 0.6; 
+	sonsVolume["ataque_inimigo_comum"] = 1;
+	sonsVolume["ataque_inimigo_alado"] = 0.5;
+	
+	var sonsDuracao = {};
+	sonsDuracao["musica_stage"] = 130.776;
+	sonsDuracao["morte_do_personagem"] = 3.939563;  
+	sonsDuracao["princesa_salva"] = 3.181188;
+	
+	var audioGame = new Assets_Sound();
+	audioGame.load("musica_stage","StreetFighter2010HorizontalCity Lights.mp3"); //Duração: 130.776
+	audioGame.load("pulo", "S3K_6B.wav"); 
+	audioGame.load("ataque_inimigo_comum", "nsmb_fireball.wav");
+	audioGame.load("ataque_inimigo_alado", "nsmb_hip-drop.mp3");
+	audioGame.load("princesa_salva", "OOT_Fanfare_HeartContainer.wav"); 
+	audioGame.load("morte_do_personagem", "nsmb_game_over.wav");
+	audioGame.load("som_mola", "Bouncer.wav"); 
+	audioGame.load("morte_boss", "S3K_4E.wav"); 
+	audioGame.load("mago", "S3K_9C.wav");
+	
+	/*Tocando a música da fase.*/
+	audioGame.play("musica_stage",sonsVolume["musica_stage"]);
+	
+	/*----------------------------------------------------------------------------------------------------------------------*/
+	
+	/*Variáveis para auxiliarem quando o personagem estiver em cima das plataformas móveis.*/
+	var desliga_colisao_para_pular = false;
+	
+	/*Variáveis para auxiliar na pontuação, morte, game over e objetivo da fase concluído.*/
+	var stage_complete = false;
+	
+	var pc = new Sprite();
+	
+	/*Pose é o conjunto de frames. Na imagem (sprite sheet), as poses podem ser todas verticais ou todas hotizontais.*/
+	pc.pose = 1;
+	/*Frame é cada movimento do personagem. Cada imagem no conjunto de imagens.*/
+	pc.frame = 1; 
+	
+	var andou_para_direita = true;
+	var andou_para_esquerda = false;
+	var esta_plataforma_movel = false;
+	var esta_plataforma_movel1 = false;
+	var esta_plataforma_movel2 = false;
+	var esta_plataforma_movel3 = false;
+	var esta_plataforma_movel4 = false;
+	var esta_plataforma_movel5 = false;
+	var esta_plataforma_movelBaseMola = false;
+	var pode_pular_na_plataforma_movel = false;
+	var esta_plataforma_mola = false;
+	var tocar_musica_mola = true;
+	
+	var background = new Sprite();
+				  
+	background.desenhar = function(ctx){
+		imagens.desenhaXY(ctx,"background",0,0,tela.width,tela.height);
+    }
+	
+	/*Criando os inimigos:
+	OBS: As posições *30, fica mais fácil saber qual a posição deles, pois dessa forma, é só saber a posição do bloquinhos
+	onde o inimigo vai ficar e multiplicar por 30. Qualquer dúvida, olhe as posições dos bloquinhos quando construo eles, logo acima.*/
+	
+	/*É a medusa.*/
+	var inimigo1 = new Sprite();
+	inimigo1.x = 30*11;
+	inimigo1.y = 30*25 - 18;
+	inimigo1.vx = 40;
+	inimigo1.h = 25;
+	inimigo1.w = 50;
+	
+	inimigo1.desenhar = function(ctx){  
+		if(inimigo1.vx < 0){
+			imagens.desenhaXY(ctx,"inimigo1",inimigo1.x, inimigo1.y - 50,50,50);  
+		}else if(inimigo1.vx > 0){
+			imagens.desenhaXY(ctx,"inimigo1_Esp",inimigo1.x, inimigo1.y - 50,50,50);
+		}
+		
+		//ctx.strokeStyle = "red";
+		//ctx.strokeRect(inimigo1.x,inimigo1.y,inimigo1.w,inimigo1.h);
+    };
+	
+	inimigo1.controlar = function (){
+		if(inimigo1.x <= 200 || inimigo1.x > 600){
+			inimigo1.vx = -inimigo1.vx;
+		}
+	};
+	
+	var inimigo2 = new Sprite();
+	inimigo2.x = 30*6;
+	inimigo2.y = 30*22 - 18;
+	inimigo2.vx = 60;
+	inimigo2.h = 25;
+	inimigo2.w = 50;
+	
+	inimigo2.desenhar = function(ctx){  
+		if(inimigo2.vx < 0){
+			imagens.desenhaXY(ctx,"inimigo1",inimigo2.x, inimigo2.y - 50,50,50);  
+		}else if(inimigo2.vx > 0){
+			imagens.desenhaXY(ctx,"inimigo1_Esp",inimigo2.x, inimigo2.y - 50,50,50);
+		}
+		
+		//ctx.strokeStyle = "red";
+		//ctx.strokeRect(inimigo2.x,inimigo2.y,inimigo2.w,inimigo2.h);
+    };
+	
+	inimigo2.controlar = function (){
+		if(inimigo2.x <= 100 || inimigo2.x > 210){
+			inimigo2.vx = -inimigo2.vx;
+		}
+	};
+	
+	/*É o robozinho que parece um olho.*/
+	var inimigo4 = new Sprite();
+	inimigo4.x = 598;
+	inimigo4.y = 30*6 - 15;
+	inimigo4.vx = 75;
+	inimigo4.h = 30;
+	inimigo4.w = 30;
+	
+	inimigo4.desenhar = function(ctx){  
+		if(inimigo4.vx < 0){
+			imagens.desenhaXY(ctx,"inimigo2",inimigo4.x, inimigo4.y - 40,30,30);
+		}else if(inimigo4.vx > 0){
+			imagens.desenhaXY(ctx,"inimigo2_Esp",inimigo4.x, inimigo4.y - 40,30,30);
+		}
+		
+		//ctx.strokeStyle = "red";
+		//ctx.strokeRect(inimigo4.x,inimigo4.y,inimigo4.w,inimigo4.h);
+    };
+	
+	inimigo4.controlar = function (){
+		if(inimigo4.x <= 500 || inimigo4.x > 650){
+			inimigo4.vx = -inimigo4.vx;
+		}
+	};
+	
+	/*É o robozingo motorizado.*/
+	var inimigo5 = new Sprite();
+	inimigo5.x = 350;
+	inimigo5.y = 30*12 - 15;
+	inimigo5.vx = 160;
+	inimigo5.w = 70;
+	
+	inimigo5.desenhar = function(ctx){  
+		if(inimigo5.vx < 0){
+			imagens.desenhaXY(ctx,"inimigo3",inimigo5.x, inimigo5.y - 53,70,50);  
+		}else if(inimigo5.vx > 0){
+			imagens.desenhaXY(ctx,"inimigo3_Esp",inimigo5.x, inimigo5.y - 53,70,50);  
+		}
+		
+		//ctx.strokeStyle = "red";
+		//ctx.strokeRect(inimigo5.x,inimigo5.y,inimigo5.w,inimigo5.h);
+    };
+	
+	inimigo5.controlar = function (){
+		if(inimigo5.x <= 330 || inimigo5.x > 480){
+			inimigo5.vx = -inimigo5.vx;
+		}
+	};
+	
+	var boss = new Sprite();
+	boss.x = 30*4;
+	boss.y = 30*3 + 20; 
+	boss.h = 30;
+	boss.w = 60;
+	boss.intervaloTiro = 0;
+	
+	var tiros = [];
+	var velTiro = 200;
+	var permissaoAtirar = new Array(true, false, false, true, true, false);
+	var podeAtirar = false;
+	
+	boss.desenhar = function(ctx){  
+		imagens.desenha(ctx,"boss_image", 135, 688, 56, 53,boss.x ,boss.y, 55, 55);
+		
+		//ctx.strokeStyle = "red";
+		//ctx.strokeRect(boss.x,boss.y,boss.w,boss.h);
+    };
+	
+	boss.controlar = function (){
+		if(boss.pulando && boss.vy == 0){
+			boss.vy = -2.6*g;
+			boss.pulando = false;
+		}
+	};
+	
+	var explosaoInimigos = new Sprite();
+	explosaoInimigos.x = -100;
+	explosaoInimigos.y = -100;
+	explosaoInimigos.pose = 0;
+	explosaoInimigos.frame = 0;
+	
+	explosaoInimigos.desenhar = function(ctx){
+		ctx.save();
+		ctx.translate(explosaoInimigos.x, explosaoInimigos.y);
+		ctx.rotate(explosaoInimigos.angulo+Math.PI/2);
+
+		imagens.desenha(ctx,"morte_inimigos",Math.floor(explosaoInimigos.frame)*200, 0, 200, 200,-45,-128, 200, 200);
+		explosaoInimigos.frame = explosaoInimigos.frame + (7*dt);
+		
+		if(explosaoInimigos.frame > 12){
+			explosaoInimigos.frame = 0;
+			explosaoInimigos.x = -10000;
+		}
+				
+		ctx.restore();	
+	};
+	
+	var princesa = new Sprite();
+	princesa.x = 30*29;
+	princesa.y = 30*2 - 13;
+	
+	princesa.desenhar = function(ctx){  
+		imagens.desenhaXY(ctx,"princesa",princesa.x - 20, princesa.y - 45,45,45);  
+    };
+	
+	var missaoCumprida = new Sprite();
+	missaoCumprida.x = -200;
+	missaoCumprida.y = -200;
+	
+	missaoCumprida.desenhar = function(ctx){  
+		imagens.desenhaXY(ctx,"missao_cumprida",missaoCumprida.x - 22, missaoCumprida.y - 53,45,45);  
+    };
+	
+	var achouPrincesa = new Sprite();
+	achouPrincesa.x = -100;
+	achouPrincesa.y = -100;
+	achouPrincesa.pose = 0;
+	achouPrincesa.frame = 0;
+	
+	achouPrincesa.desenhar = function(ctx){
+		ctx.save();
+		ctx.translate(achouPrincesa.x, achouPrincesa.y);
+		ctx.rotate(achouPrincesa.angulo+Math.PI/2);
+		
+		imagens.desenha(ctx,"achou_princesa",Math.floor(achouPrincesa.frame)*128, 0, 128, 128,-70,-128, 128, 128);
+		achouPrincesa.frame = achouPrincesa.frame + (3*dt);
+			
+		if(achouPrincesa.frame > 9){
+			achouPrincesa.frame = 0;
+			achouPrincesa.x = -10000;
+		}
+		
+		ctx.restore();	
+	};
+	
+	/*------------------------------------------------------------------------------------------------------------------*/
+	
+	mapa.desenhar = function(ctx,l,c,tipoPlataforma){  
+	
+		if (tipoPlataforma == 1){
+			imagens.desenhaXY(ctx,"plataforma_chao",c*30, l*30-22,30,30);  
+		}else if (tipoPlataforma == 2){
+			imagens.desenhaXY(ctx,"plataforma_geral",c*30, l*30-22,30,30); 
+		}else if (tipoPlataforma == 3){
+			imagens.desenhaXY(ctx,"plataforma_degrau",c*30, l*30-22,30,30);   
+		}else if (tipoPlataforma == 4){
+			imagens.desenhaXY(ctx,"plataforma_master",c*30, l*30-22,30,30);  
+		}else if (tipoPlataforma == 5){
+			imagens.desenhaXY(ctx,"plataforma_gelo",c*30, l*30-22,30,30);  
+		}else if (tipoPlataforma == 6){
+			imagens.desenhaXY(ctx,"plataforma_sincrona",c*30, l*30-22,30,30);  
+		}else if (tipoPlataforma == 7){
+			imagens.desenhaXY(ctx,"espetos",c*30, l*30-22,30,30);  
+		}
+    };
+	
+	/*------------------------------------------------------------------------------------------------------------------*/
+	
+	/*Desenhando as plataformas móveis:*/
+		
+		var platM1 = new Sprite();
+		platM1.x = 560;
+		platM1.y = 480; //Era 510
+		platM1.vx = 40;
+		platM1.w = 110;
+		platM1.h = 80;
+		platM1.desenhar = function(ctx){ 
+			imagens.desenhaXY(ctx,"plataforma_movel",this.x,this.y,100,150);
+		}
+		
+		platM1.controlar = function () {
+			if(platM1.x < 460 || platM1.x > 620){
+				platM1.vx = -platM1.vx;
+            }
+		};
+		
+		var platM2 = new Sprite();
+		platM2.x = 250;
+		platM2.y = 480;
+		platM2.vx = -70;
+		platM2.w = 110;
+		platM2.h = 80;
+		platM2.desenhar = function(ctx){ 
+			imagens.desenhaXY(ctx,"plataforma_movel",this.x,this.y,100,150);
+		}
+		
+		platM2.controlar = function () {
+			if(platM2.x < 110 || platM2.x > 360){
+				platM2.vx = -platM2.vx;
+            }
+		};
+		
+		var platM3 = new Sprite();
+		platM3.x = 110;
+		platM3.y = 350;
+		platM3.vy = 45;
+		platM3.w = 110;
+		platM3.h = 80;
+		platM3.desenhar = function(ctx){ 
+			imagens.desenhaXY(ctx,"plataforma_movel",this.x,this.y,100,150);
+		}
+		
+		platM3.controlar = function () {
+			if(platM3.y < 320 || platM3.y > 410){
+				platM3.vy = -platM3.vy;
+            }
+	    };
+		
+		var platM4 = new Sprite();
+		platM4.x = 260;
+		platM4.y = 400;
+		platM4.vx = 80;
+		platM4.w = 110;
+		platM4.h = 80;
+		platM4.desenhar = function(ctx){ 
+			imagens.desenhaXY(ctx,"plataforma_movel",this.x,this.y,100,150);
+		}
+		
+		platM4.controlar = function () {
+			if(platM4.x < 230 || platM4.x > 640){
+				platM4.vx = -platM4.vx;
+            }
+		};
+		
+		var platM5 = new Sprite();
+		platM5.x = 740;
+		platM5.y = 330;
+		platM5.vy = 45;
+		platM5.w = 110;
+		platM5.h = 80;
+		
+		platM5.desenhar = function(ctx){ 
+			imagens.desenhaXY(ctx,"plataforma_movel",this.x,this.y,100,150);
+		}
+		
+		platM5.controlar = function () {
+			if(platM5.y < 280 || platM5.y > 405){
+				platM5.vy = -platM5.vy;
+            }
+	    };
+		
+		var plataformaBaseMola = new Sprite();
+		plataformaBaseMola.x = 50;
+		plataformaBaseMola.y = 330;
+		plataformaBaseMola.vx = 60;
+		plataformaBaseMola.w = 45;
+		plataformaBaseMola.h = 45;
+		
+		plataformaBaseMola.desenhar = function(ctx){ 
+			imagens.desenhaXY(ctx,"base_mola",this.x,this.y,45,30);
+		}
+		
+		plataformaBaseMola.controlar = function () {
+			if(plataformaBaseMola.x < 5 || plataformaBaseMola.x > 120){
+				plataformaBaseMola.vx = -plataformaBaseMola.vx;
+            }
+		};
+		
+		var mola = new Sprite();
+		mola.x = 50;
+		mola.y = 330;
+		mola.h = 31;
+		mola.w = 31;
+		mola.pose = 0;
+		mola.frame = 13;
+	
+		mola.desenhar = function(ctx){
+			ctx.save();
+			ctx.translate(mola.x, mola.y);
+			ctx.rotate(mola);
+			
+			if(esta_plataforma_mola){
+			
+				mola.frame = mola.frame - (30*dt);
+			    if(mola.frame == 0) mola.frame = 13;
+				pc.vy = -2.2*g;
+				
+			}else{
+				mola.frame = 13;
+			}
+			
+			imagens.desenha(ctx,"mola",Math.floor(mola.frame)*70, mola.pose*70, 70, 70, 5, -17, 35, 35);
+					
+			ctx.restore();	
+			
+			ctx.strokeStyle = "yellow";
+			ctx.strokeRect(mola.x,mola.y,mola.w,mola.h);
+		};
+		
+		mola.controlar = function () {
+			mola.x = plataformaBaseMola.x;
+			mola.y = plataformaBaseMola.y - 5;
+		};
+		
+	/*------------------------------------------------------------------------------------------------------------------*/
+	
+	pc.desenhar = function(ctx){
+	
+		ctx.save();
+		//ctx.translate(pc.x + 15, pc.y + 40);
+		ctx.translate(pc.x, pc.y);
+		ctx.rotate(pc.angulo + Math.PI/2);
+		
+		/*Primeira parte da animação. É a parte onde eu seleciono as poses do personagem. Cada pose (nesse caso) são representadas pelas linhas
+		do sprite sheet (da figura que eu carreguei (Old hero.png)). A pose == 0 está vazia na imagem. Assim a minha pose começa no 1. É importante
+		observar que nessa figura, o tamanho de cada célula da grade tem 16X16.*/
+
+		//Esse primeiro if está configurando a pose == 1, como a pose onde o personagem está parado. O código Math.abs(pc.vx) < 1, regula 
+		//quando o personagem deixar de andar para a esquerda ou direita, ele deve (depois de uma escorregadinha, devida a aceleração ax), voltar
+		//imediatamente a pose onde ele fica parado. Se vc fizer if(pc.vc == 0), o personagem nunca vai voltar para a pose de parado, depois de andar 
+		//para a direita ou esquerda. E o valor < 1, é o que mais fica legal, entre o movimento de andar para a esquerda ou direita e voltar a ficar
+		//parado.
+		if(Math.abs(pc.vx) < 1){
+	
+			//ctx.scale(2,2); -> Essa linha, significa que eu estou aumentando a imagem do personagem na escala de 2:2. Se fosse na escala normal de 
+			//1:1, o desenho do personagem iria ficar muito pequeno.
+			if(andou_para_direita){
+				ctx.scale(2,2);
+			}else if(andou_para_esquerda){
+				ctx.scale(-2,2);
+			}
+			
+			pc.pose = 1;
+			
+		//Esse segundo if está configurando a pose == 2, como a pose onde o personagem está andando para a direita.	
+		}else if(pc.vx > 0){
+			ctx.scale(2,2);
+			pc.pose = 2;
+			andou_para_direita = true;
+			andou_para_esquerda = false;
+		
+		//Esse else está configurando a pose == 2, como a pose onde o personagem está andando para a esquerda. Isso é observado, no código 
+		//ctx.scale(-2,2); Esse código, negativo no primeiro parâmetro, vira a figura no eixo x (invérte-o), dando uma forma espelhada para o personagem.
+		//OBS: Se vc negativar o segundo parâmetro do ctx.scale, vc também inverterá o personagem, porém no eixo y. 
+		}else {
+			ctx.scale(-2,2);
+			pc.pose = 2;
+			andou_para_direita = false;
+			andou_para_esquerda = true;
+		}
+		
+		/*Essa linha, representa a velocidade da passagem de um frame para outro, de uma determinada pose. Nesse caso, o valor 8 
+		para a velocidade do frame (8 frames por segundo) ficou muito bom. Quanto maior é a velocidade, mais rápido será a passagem de um frame para
+		para o próximo, em uma mesma pose.*/
+		pc.frame = pc.frame + (8*dt);
+		
+		/*Essa é a segunda parte da animação. Quando os frames de cada pose do personagem são configurados.*/
+		
+		switch(pc.pose){
+		
+			//Se o personagem estiver na pose 1 (ou seja, ele está parado), eu vou do 1º frame até o 4º. Se eu estiver no 5º frame, eu volto no 1º, 
+			//ou seja, o 5º e 6º (da pose 1 (da linha 1)) não são executados. Portanto, se o personagem estiver parado, é executado do 1º ao 4º frame
+			//continuamente (1º -> 2º -> 3º -> 4º -> 1º -> 2º -> ...).
+			case 1: if(pc.frame >= 5) pc.frame = 1;
+			break;
+			//Se o personagem estiver na pose 2 (ou seja, ele está andando), eu vou do 1º frame até o 6º. Se eu estiver no 7º frame, eu volto no 1º, 
+			//ou seja, todos os frames da pose 2 (linha 2) serão executados, pois o 7º é uma imagem vazia (assim com o frame na posição zero). 
+			//Portanto, se o personagem estiver andando, é executado do 1º ao 6º frame continuamente (1º -> 2º -> 3º -> 4º -> 5º -> 6º -> 1º -> ...).
+			case 2: if(pc.frame >= 7) pc.frame = 1;
+			break;
+		}
+		
+		/*Essa é a terceira parte da animação. Quando a pose e seus respectivos frames são configurados para o personagem pular. É um pouco 
+		diferente das poses do personagem parado e andando, pos nesse caso, os frames não estão sendo executados continuamente.*/
+		
+		                                                     //^
+		//Se pc.vy < 0, quer dizer q o personagem está pulando | (está subindo). Nesse caso, o professor optou por usar apenas um frame para essa
+		//ação. Dessa forma, como será usado apenas um frame, basta eu indicar a pose (linha) desse frame e a posição do frame (em relação a sua pose).
+		//Aqui, para indicar que o personagem está pulando, eu peguei o 1º frame da 3º pose da figura.
+		if(pc.vy < 0){
+		
+			if(esta_plataforma_movel == false){
+				pc.pose = 3;
+				pc.frame = 1;
+			}else if(pode_pular_na_plataforma_movel){
+				pc.pose = 3;
+				pc.frame = 1;
+			}
+			
+		//Se pc.vy > 0, quer dizer q o personagem está caindo (depois do pulo). Nesse caso, o professor optou por usar apenas um frame para essa
+		//ação. Dessa forma, como será usado apenas um frame, basta eu indicar a pose (linha) desse frame e a posição do frame (em relação a sua pose).
+		//Aqui, para indicar que o personagem está caindo, eu peguei o 2º frame da 3º pose da figura.
+		}else if(pc.vy > 0){
+		
+			if(esta_plataforma_movel == false){
+				pc.pose = 3;
+				pc.frame = 2;
+			}else if(pode_pular_na_plataforma_movel){
+				pc.pose = 3;
+				pc.frame = 2;
+			}
+		}
+		
+		if(stage_complete){
+			pc.pose = 3;
+			pc.frame = 6;
+		}
+		
+		if(personagemMorreu){
+			pc.pose = 1;
+			pc.frame = 5;
+		}
+		
+		if(esperandoMusicaMortePCTerminar){
+			pc.pose = 0;
+			pc.frame = 0;
+		}
+		
+		// O oitavo parámetro (-20) acerta o personagem nos bloquinhos (agora, ele anda exatamente na superfície de cada bloco).
+		
+		//Parâmetros da função desenha:(1,2,3,4,5,6,7,8,9,10).
+		
+		/*Legenda:
+		1 - Variável que constrói a tela do game.
+		2 - Nome da figura do sprite sheet, ou seja, sua referência.
+		3 - Configuração das posições do frame. Deve ser multiplicado pelo tamanho de cada sprite (no sprite sheet, ou seja, na figura). Nesse caso, cada sprite dessa figura tem 16X16 (dúvidas, é só usar o esquema de grade do Gimp). Esse parâmetro, representa a posição em x onde se inicializará o corte do sprite (posição inicial do corte no eixo x).
+		4 - Configuração das posições da pose. Deve ser multiplicado pelo tamanho de cada sprite (no sprite sheet, ou seja, na figura). Nesse caso, cada sprite dessa figura tem 16X16 (dúvidas, é só usar o esquema de grade do Gimp). Esse parâmetro, representa a posição em y onde se inicializará o corte do sprite (posição inicial do corte no eixo y).
+		5 - É o comprimento da área do corte do sprite, a partir dos valores do 3º e 4º parâmetro da função desenha.
+		6 - É a largura da área do corte do sprite, a partir dos valores do 3º e 4º parâmetro da função desenha.
+		7 - Posição da figura cortada (sprite) no eixo x do jogo.
+		8 - Posição da figura cortada (sprite) no eixo y do jogo.
+		9 - Tamanho da figura no exixo x. É a sua escala. Deixe em seu tamanho original 16X16, pois já configuramos a escala do personagem com a função scale.
+		10 - Tamanho da figura no exixo y. É a sua escala. Deixe em seu tamanho original 16X16, pois já configuramos a escala do personagem com a função scale.*/
+		
+		
+        imagens.desenha(ctx,"personagem",Math.floor(pc.frame)*16, pc.pose*16, 16, 16,-8,-20, 16, 16);		
+		ctx.restore();	
+		
+		//ctx.strokeStyle = "blue";
+		//ctx.strokeRect(pc.x,pc.y,pc.w,pc.h);
+    };
+	
+	pc.controlar = function(){
+	
+		if(this.direita && stage_complete == false){
+			if(esta_no_gelo == false){
+				this.ax = -90;
+				this.atx = 1.5;
+			}else{
+				this.ax = -90;
+				this.atx = 0.3;
+			}
+			
+		}else if(this.esquerda && stage_complete == false){
+			if(esta_no_gelo == false){
+				this.ax = 90;
+				this.atx = 1.5;
+			}else{
+				this.ax = 90;
+				this.atx = 0.3;
+			}
+			
+		}else{
+			this.ax = 0;
+		}
+		
+		if(this.pulando && this.vy == 0 && stage_complete == false){
+			if(esta_na_plataforma_sincrona == false && esta_no_gelo == false){
+				this.vy = -2*g;
+				this.pulando = false;
+				audioGame.play("pulo",sonsVolume["pulo"]);
+			}else{
+				this.vy = -2.65*g;
+				this.pulando = false;
+				audioGame.play("pulo",sonsVolume["pulo"]);
+			}
+		}
+	};
+	
+	/*------------------------------------------------------------------------------------------------------------------*/
+		
+	addEventListener("keydown", function(e){
+		if(e.keyCode==37){
+			pc.direita = true;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = true;
+		}
+		if(e.keyCode==38){
+			pc.pulando = true;
+			desliga_colisao_para_pular = true;
+			pode_pular_na_plataforma_movel = true;
+		}
+
+	});
+	addEventListener("keyup", function(e){
+		if(e.keyCode==37){
+			pc.direita = false;
+		}
+		if(e.keyCode==39){
+			pc.esquerda = false;
+		}
+		if(e.keyCode==38){
+			pc.pulando = false;
+			desliga_colisao_para_pular = false;
+			pode_pular_na_plataforma_movel = true;
+		}
+		
+	});
+
+	setInterval(passo, 1000/fps);
+	setInterval(plataformaFalsa, 2000);
+	
+	/*Controle das plataformas Síncronas------------------------------------------------------*/
+	
+	var platAlternadas = {
+	
+		platsSincrono: [],
+		platsEspeto: [],
+		
+		adicionaPlatSincrona: function(x,y,t){
+			this.platsSincrono.push({"x":x, "y":y, "t":t, "f":0});
+		},
+		
+		adicionaPlatEspeto: function(x,y,t){
+			this.platsEspeto.push({"x":x, "y":y, "t":t, "f":0});
+		},
+	
+		animaPlatSincrona: function(){
+		
+			for(var i = 0; i < this.platsSincrono.length; i++){
+				
+				var plat = this.platsSincrono[i];
+				
+				if(plat.f > plat.t){
+					mapa[plat.x][plat.y] = (mapa[plat.x][plat.y] == 6)?0:6;
+					plat.f = 0;
+				}
+				
+				plat.f = plat.f + (1*dt);
+			}
+		},
+		
+		animaPlatEspeto: function(){
+		
+			for(var i = 0; i < this.platsEspeto.length; i++){
+				
+				var plat = this.platsEspeto[i];
+				
+				if(plat.f > plat.t){
+					mapa[plat.x][plat.y] = (mapa[plat.x][plat.y] == 7)?2:7;
+					plat.f = 0;
+				}
+				
+				plat.f = plat.f + (1*dt);
+			}
+		}
+	}
+	
+	platAlternadas.adicionaPlatSincrona(9,22,5);
+	platAlternadas.adicionaPlatSincrona(9,26,4);
+	platAlternadas.adicionaPlatSincrona(7,29,6);
+	platAlternadas.adicionaPlatSincrona(6,25,4);
+	
+	platAlternadas.adicionaPlatEspeto(9,11,3);
+	platAlternadas.adicionaPlatEspeto(9,13,2.5);
+	platAlternadas.adicionaPlatEspeto(9,15,4);
+	platAlternadas.adicionaPlatEspeto(9,16,5);
+	
+	/*----------------------------------------------------------------------------------------*/
+	
+	function plataformaFalsa(){
+	
+		if (mapa[22][22] == 2){
+			mapa[22][22] = 0;
+		}else if (mapa[22][22] == 0){
+			mapa[22][22] = 2;
+		}
+		
+		if (mapa[9][5] == 2){
+			mapa[9][5] = 0;
+		}else if (mapa[9][5] == 0){
+			mapa[9][5] = 2;
+		}
+	};
+	
+	function passo(){
+
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, tela.width, tela.height);	
+		
+		platAlternadas.animaPlatSincrona();
+		platAlternadas.animaPlatEspeto();
+		
+		audioGame.reiniciaMusicaPrincipal(sonsDuracao["musica_stage"]);
+		audioGame.reiniciaMusicaPrincipal_Morte(sonsDuracao["morte_do_personagem"]); 
+		
+		if(personagemMorreu && pc.vy >= 0){
+		
+			if (frequenciaPersonagemMorrendo < tempoPersonagemParadoAoMorrer){
+				pc.vy = 0;
+				pc.ay = 0;
+				gPersonagemAndarNaGrid = 0;
+				stage_complete = true;
+				frequenciaPersonagemMorrendo = frequenciaPersonagemMorrendo + dt;
+				
+			}else{
+				gPersonagemAndarNaGrid = 200;
+				
+				if(pc.y >= 819){
+					frequenciaPersonagemMorrendo = 0;
+					andou_para_direita = true;
+					pc.altura_padrao_pulo = 30;
+					pc.h = 30;
+					esperandoMusicaMortePCTerminar = true;
+					pc.x = 0;
+					pc.y = 825.5;
+					
+					if(audioGame.terminouMusicaMortePersonagem(sonsDuracao["morte_do_personagem"])){
+						personagemMorreu = false;
+						stage_complete = false;
+						esperandoMusicaMortePCTerminar = false;
+						tocar_musica_morte_espeto = true;
+						
+						//Após o personagem morrer, eu volto os inimigos as suas posições originais, se eles já morreram.
+						inimigo1.x = 30*11;
+						inimigo1.y = 30*25 - 18;
+						inimigo1.vx = 40;
+						inimigo2.x = 30*6;
+						inimigo2.y = 30*22 - 18;
+						inimigo2.vx = 60;
+						inimigo4.x = 598;
+						inimigo4.y = 30*6 - 15;
+						inimigo4.vx = 75;
+						inimigo5.x = 350;
+						inimigo5.y = 30*12 - 15;
+						inimigo5.vx = 160;
+						boss.x = 30*4;
+						boss.y = 30*3 + 20; 
+					}
+				}	
+			}
+		}
+		
+		/*Se a música de game completado acaba, o mago aparece no lugar da princesa E a animação de fumaça ocorre.*/
+		if(audioGame.terminouMusicaStageComplete(sonsDuracao["princesa_salva"]) && terminouAnimacao){
+			achouPrincesa.x = 30*29;
+			achouPrincesa.y = 30*2 - 13;
+			princesa.x = -40;
+			princesa.y = -40;
+			terminouAnimacao = false;
+			missaoCumprida.x = 30*29;
+			missaoCumprida.y = 30*2 - 13;
+			achouPrincesa.desenhar(ctx);
+			audioGame.play("mago");
+		}
+		
+		/*Esses testes me auxiliam a fazer o personagem ficar parado na plataforma (Pose == 1).*/
+		if(esta_plataforma_movel1 == false && esta_plataforma_movel2 == false && esta_plataforma_movel3 == false && esta_plataforma_movel4 == false && esta_plataforma_movel5 == false && esta_plataforma_movelBaseMola == false){
+			esta_plataforma_movel = false;
+		}else{
+			esta_plataforma_movel = true;
+		}
+		
+		/*Desenha o plano de fundo do game.*/
+		background.desenhar(ctx);
+		
+		/*Desenhando as plataformas fixas do game:*/
+		desenharMapa();
+		
+		/*Desenhando e controlando as plataformas móveis:*/
+		platM1.controlar();
+		platM1.moverPlataformaMovel(dt);
+		platM1.desenhar(ctx);
+		platM2.controlar();
+		platM2.moverPlataformaMovel(dt);
+		platM2.desenhar(ctx);
+		platM3.controlar();
+		platM3.moverPlataformaMovel(dt);
+		platM3.desenhar(ctx);
+		platM4.controlar();
+		platM4.moverPlataformaMovel(dt);
+		platM4.desenhar(ctx);
+		platM5.controlar();
+		platM5.moverPlataformaMovel(dt);
+		platM5.desenhar(ctx);
+		plataformaBaseMola.controlar();
+		plataformaBaseMola.moverPlataformaMovel(dt);
+		plataformaBaseMola.desenhar(ctx);
+		mola.controlar();
+		mola.moverPlataformaMovel(dt);
+		mola.desenhar(ctx);
+		
+		pc.controlar();
+		pc.moverCartGrid(dt,gPersonagemAndarNaGrid, mapa);
+		pc.desenhar(ctx);
+		
+		inimigo1.controlar();
+		inimigo1.moverPlataformaMovel(dt);
+		inimigo1.desenhar(ctx);
+		inimigo2.controlar();
+		inimigo2.moverPlataformaMovel(dt);
+		inimigo2.desenhar(ctx);
+		inimigo4.controlar();
+		inimigo4.moverPlataformaMovel(dt);
+		inimigo4.desenhar(ctx);
+		inimigo5.controlar();
+		inimigo5.moverPlataformaMovel(dt);
+		inimigo5.desenhar(ctx);
+		
+		boss.controlar();
+		boss.moverPlataformaMovel(dt);
+		boss.desenhar(ctx);
+		
+		princesa.moverPlataformaMovel(dt);
+		princesa.desenhar(ctx);
+		missaoCumprida.moverPlataformaMovel(dt);
+		missaoCumprida.desenhar(ctx);
+		
+		explosaoInimigos.desenhar(ctx);
+		achouPrincesa.desenhar(ctx);
+		
+		limiteTela();
+		verificaTipoPlataforma();
+		morreNoEspeto();
+		
+		/*Desenha o tiro, configura-o e o movimenta na tela.*/
+		podeAtirar = permissaoAtirar[Math.floor(Math.random() * 6)];
+		
+		if(podeAtirar && boss.intervaloTiro <= 0 && esta_no_gelo){
+		
+			var tiroBoss = new Sprite();
+			tiroBoss.w = 20;
+			tiroBoss.h = 40;
+			tiroBoss.x = boss.x + 40;
+			tiroBoss.y = boss.y + 20;
+			
+			tiroBoss.desenharTiro = function(ctx){
+				imagens.desenha(ctx,"tiros_boss", 200, 169, 94, 64,tiroBoss.x ,tiroBoss.y, 31, 31);
+			};
+			
+			tiroBoss.controlar = function(veloc_tiro){
+				this.vx = veloc_tiro;
+			}
+			
+			/*Essa linha, auxilia na retirada do Tiro, da memória do jogo.*/
+			tiros.push(tiroBoss);
+			
+			//boss.intervaloTiro = 1/3; // 3 tiros por segundo.
+			boss.intervaloTiro = 1; // 1 tiros por segundo. 
+		}
+		
+		boss.intervaloTiro -= 0.6*dt;
+		
+		tiros.forEach(function(t){	
+		
+			t.controlar(velTiro);
+			t.moverPlataformaMovel(dt);
+			t.desenharTiro(ctx);
+			//ctx.strokeStyle = "blue";
+			//ctx.strokeRect(t.x,t.y,t.w,t.h);
+			
+			/*Colisão entre os tiros do Chefe no personagem:*/
+			if(pc.colidiuCom(t)){
+			
+				if(pc.y + 10 > t.y){
+					audioGame.stop("musica_stage");
+					audioGame.play("morte_do_personagem");
+					personagemMorreu = true;
+					pc.vy = -2*g;
+					tempoPersonagemParadoAoMorrer = 1
+					pc.altura_padrao_pulo = 10;
+					pc.h = -100;
+					
+					t.y = -20;
+					t.x = -20;
+					t.vy = 0;
+					tiros.splice(tiros.indexOf(t), 1);
+				}	
+			}
+			
+			//Retirando o tira da memória do jogo.
+			if(t.y < 0 || t.y > tela.height || t.x < 0 || t.x > tela.width){
+				tiros.splice(tiros.indexOf(t), 1);
+			}
+		});
+		
+		/*Colisão entre o personagem e as plataformas móveis:-----------------------------------------------*/
+		
+		if(pc.colidiuCom(platM1)){
+		
+			esta_plataforma_movel1 = true;
+		
+			//if((pc.x > 562 && pc.x < 657) && (desliga_colisao_para_pular == false)){
+			if((pc.x > platM1.x + 2 && pc.x < platM1.x + 97) && (desliga_colisao_para_pular == false)){
+				
+				if(pc.y >= 550){
+				
+					pc.x = pc.x + platM1.vx*dt;
+					pc.y = 550;
+					pc.vy = 0;	
+					pode_pular_na_plataforma_movel = false;
+					
+				}
+				desliga_colisao_para_pular = false;
+				
+			} 	
+		}else{
+			esta_plataforma_movel1 = false;
+		}
+		
+		if(pc.colidiuCom(platM2)){
+		
+			esta_plataforma_movel2 = true;
+		
+			if((pc.x > platM2.x + 2 && pc.x < platM2.x + 97) && (desliga_colisao_para_pular == false)){
+				
+				if(pc.y >= 550){
+				
+					pc.x = pc.x + platM2.vx*dt;
+					pc.y = 550;
+					pc.vy = 0;
+					pode_pular_na_plataforma_movel = false;
+				}
+				
+				desliga_colisao_para_pular = false;
+			}    
+		}else{
+			esta_plataforma_movel2 = false;
+		}
+		
+		if(pc.colidiuCom(platM3)){
+		
+			//if(pc.y >= 473 && (pc.x >= 115 && pc.x <= 210)){ 
+			if(pc.x >= 115 && pc.x <= 210){
+			
+				esta_plataforma_movel3 = true;
+			
+				if(pc.y >= platM3.y + 70){
+				
+					pc.y = platM3.y + 70;	
+					pode_pular_na_plataforma_movel = false;
+				
+					if(desliga_colisao_para_pular == false){
+						pc.vy = platM3.vy;	
+						
+						/*Esse if é para o personagem não pular "sozinho" quando a plataforma estiver no seu ponto mais alto e descer. Se quiser 
+						  esse efeito, apenas retire esse if.*/
+						if(pc.y <= 390){
+							pc.y = platM3.y + 71;
+							pc.vy = 0;
+						}
+						
+					}else {
+						pc.vy = 0;
+					}
+				}
+			}		
+		}else{
+			esta_plataforma_movel3 = false;
+		}
+		
+		if(pc.colidiuCom(platM4)){
+			
+			esta_plataforma_movel4 = true;
+		
+			if((pc.x > platM4.x + 2 && pc.x < platM4.x + 97) && (desliga_colisao_para_pular == false)){
+				
+				if(pc.y >= 470){ 
+				
+					pc.x = pc.x + platM4.vx*dt;
+					pc.y = 470;
+					pc.vy = 0;
+					pode_pular_na_plataforma_movel = false;
+				}
+				
+				desliga_colisao_para_pular = false;
+			}  
+			
+		}else{
+			esta_plataforma_movel4 = false;
+		}
+		
+		if(pc.colidiuCom(platM5)){
+		
+			if(pc.x >= 745 && pc.x <= 835){
+			
+				esta_plataforma_movel5 = true;
+			
+				if(pc.y >= platM5.y + 70){
+				
+					pc.y = platM5.y + 70;
+					pode_pular_na_plataforma_movel = false;
+				
+					if(desliga_colisao_para_pular == false){
+						pc.vy = platM5.vy;	
+						
+						/*Esse if é para o personagem não pular "sozinho" quando a plataforma estiver no seu ponto mais alto e descer. Se quiser 
+						  esse efeito, apenas retire esse if.*/
+						if(pc.y <= 351){
+							pc.y = platM5.y + 71;
+							pc.vy = 0;
+						}
+						
+					}else {
+						pc.vy = 0
+					}
+				}
+			}		
+		}else{
+			esta_plataforma_movel5 = false;
+		}
+		
+		if(pc.colidiuCom(plataformaBaseMola)){
+			
+			esta_plataforma_movelBaseMola = true;
+		
+			if((pc.x > plataformaBaseMola.x + 2 && pc.x < plataformaBaseMola.x + 97) && (desliga_colisao_para_pular == false)){
+				
+				if(pc.y >= 340){ 
+				
+					pc.x = pc.x + plataformaBaseMola.vx*dt;
+					pc.y = 340;
+					pc.vy = 0;
+					pode_pular_na_plataforma_movel = false;
+				}
+				
+				desliga_colisao_para_pular = false;
+			}  
+			
+		}else{
+			esta_plataforma_movelBaseMola = false;
+		}
+		
+		if(pc.colidiuCom(mola)){
+			mola.frame = 13;
+			
+			if (tocar_musica_mola == true){
+				audioGame.play("som_mola");
+				tocar_musica_mola = false;
+			}
+			
+			esta_plataforma_mola = true;
+		}else{
+			esta_plataforma_mola = false;
+			tocar_musica_mola = true;
+		}
+
+		/*-------------------------------------------------------------------------------------------------------*/
+		
+		/*Colisão entre os inimigos e o personagem.*/
+		
+		if(pc.colidiuCom(inimigo1)){
+			
+			if(pc.y < inimigo1.y){
+				explosaoInimigos.x = inimigo1.x - 40;
+				explosaoInimigos.y = inimigo1.y;
+				explosaoInimigos.frame = 0;
+				
+				inimigo1.x = -40;
+				inimigo1.y = -40;
+				inimigo1.vx = 0;
+				inimigo1.vy = 0;
+				//inimigo1.null;
+				pc.vy = -2*g;
+				audioGame.play("ataque_inimigo_comum",sonsVolume["ataque_inimigo_comum"]);
+				
+			}else if(pc.y >= inimigo1.y && pc.x >= inimigo1.x - 1){
+				audioGame.stop("musica_stage");
+				audioGame.play("morte_do_personagem");
+				personagemMorreu = true;
+				pc.vy = -2*g;
+				tempoPersonagemParadoAoMorrer = 1
+				pc.altura_padrao_pulo = 10;
+				pc.h = -100;
+			}
+		}
+		
+		if(pc.colidiuCom(inimigo2)){
+			
+			if(pc.y < inimigo2.y){
+				explosaoInimigos.x = inimigo2.x - 40;
+				explosaoInimigos.y = inimigo2.y;
+				explosaoInimigos.frame = 0;
+				
+				inimigo2.x = -40;
+				inimigo2.y = -40;
+				inimigo2.vx = 0;
+				inimigo2.vy = 0;
+				pc.vy = -2*g;
+				audioGame.play("ataque_inimigo_comum",sonsVolume["ataque_inimigo_comum"]);
+				
+			}else if(pc.y >= inimigo2.y && pc.x >= inimigo2.x - 1){
+				audioGame.stop("musica_stage");
+				audioGame.play("morte_do_personagem");
+				personagemMorreu = true;
+				pc.vy = -2*g;
+				tempoPersonagemParadoAoMorrer = 1
+				pc.altura_padrao_pulo = 10;
+				pc.h = -100;
+			}
+		}
+		
+		if(pc.colidiuCom(inimigo4)){
+			
+			if(pc.y < inimigo4.y){
+				explosaoInimigos.x = inimigo4.x - 50;
+				explosaoInimigos.y = inimigo4.y;
+				explosaoInimigos.frame = 0;
+				
+				inimigo4.x = -40;
+				inimigo4.y = -40;
+				inimigo4.vx = 0;
+				inimigo4.vy = 0;
+				pc.vy = -2*g;
+				audioGame.play("ataque_inimigo_comum",sonsVolume["ataque_inimigo_comum"]);
+				
+			}else if(pc.y >= inimigo4.y && pc.x >= inimigo4.x){
+				audioGame.stop("musica_stage");
+				audioGame.play("morte_do_personagem");
+				personagemMorreu = true;
+				pc.vy = -2*g;
+				tempoPersonagemParadoAoMorrer = 1
+				pc.altura_padrao_pulo = 10;
+				pc.h = -100;
+			}
+		}
+		
+		if(pc.colidiuCom(inimigo5)){
+			
+			if(pc.y < inimigo5.y){
+				explosaoInimigos.x = inimigo5.x;
+				explosaoInimigos.y = inimigo5.y;
+				explosaoInimigos.frame = 0;
+				
+				inimigo5.x = -40;
+				inimigo5.y = -40;
+				inimigo5.vx = 0;
+				inimigo5.vy = 0;
+				pc.vy = -2*g;
+				audioGame.play("ataque_inimigo_comum",sonsVolume["ataque_inimigo_comum"]);
+				
+			}else if(pc.y >= inimigo5.y && pc.x >= inimigo5.x){
+				audioGame.stop("musica_stage");
+				audioGame.play("morte_do_personagem");
+				personagemMorreu = true;
+				pc.vy = -2*g;
+				tempoPersonagemParadoAoMorrer = 1
+				pc.altura_padrao_pulo = 10;
+				pc.h = -100;
+			}
+		}
+		
+		if(pc.colidiuCom(boss)){
+		
+			if(boss.y <= boss.y){
+				explosaoInimigos.x = boss.x;
+				explosaoInimigos.y = boss.y + 40;
+				explosaoInimigos.frame = 0;
+				
+				boss.x = -100;
+				boss.y = -100;
+				boss.vx = 0;
+				boss.vy = 0;
+				pc.vy = -2*g;
+				audioGame.play("morte_boss");
+			}
+		}
+		
+		if(pc.colidiuCom(princesa)){
+			
+			pc.vy = 0;
+			pc.vx = 0;
+			pc.ax = 0;
+			pc.ay = 0;
+			pc.x = 835;
+			pc.y = 45;
+			
+			stage_complete = true;
+			
+			audioGame.stop("musica_stage");
+			audioGame.play("princesa_salva");
+		}
+	};
+
+	/*Essa função desenha as plataformas na tela e define suas cores.*/
+	function desenharMapa(){
+
+		for (var l = 0; l < 29; l++) {
+			for (var c = 0; c < 32; c++){
+			
+				if(mapa[l][c] == 1){
+					//ctx.fillStyle = 'gray';
+					mapa.desenhar(ctx,l,c,1);
+				}else if(mapa[l][c] == 2){
+					//ctx.fillStyle = 'red';	
+					mapa.desenhar(ctx,l,c,2);
+				}else if(mapa[l][c] == 3){
+					//ctx.fillStyle = 'green';	
+					mapa.desenhar(ctx,l,c,3);
+				}else if(mapa[l][c] == 4){
+					//ctx.fillStyle = 'blue';	
+					mapa.desenhar(ctx,l,c,4);
+				}else if(mapa[l][c] == 5){
+					//ctx.fillStyle = 'blue';	
+					mapa.desenhar(ctx,l,c,5);
+				}else if(mapa[l][c] == 6){
+					//ctx.fillStyle = 'blue';	
+					mapa.desenhar(ctx,l,c,6);
+				}else if(mapa[l][c] == 7){
+					//ctx.fillStyle = 'blue';	
+					mapa.desenhar(ctx,l,c,7);
+				}else{
+					ctx.fillStyle = 'black';
+				}
+			}
+		}	
+	};
+	
+	/*Essa função testa se o personagem está na plataforma de gelo ou na plataforma síncrona.*/
+	function verificaTipoPlataforma(){
+		
+		if(mapa[Math.floor((pc.y + 14)/30) + 1][Math.floor(pc.x/30)] == 5){
+			esta_no_gelo = true;
+		}else{
+			esta_no_gelo = false;
+		}
+		
+		if(mapa[Math.floor((pc.y + 14)/30) + 1][Math.floor(pc.x/30)] == 6){
+			esta_na_plataforma_sincrona = true;
+		}else{
+			esta_na_plataforma_sincrona = false;
+		}
+		
+		if(mapa[Math.floor((pc.y + 14)/30) + 1][Math.floor(pc.x/30)] == 7 && personagemMorreu == false){
+			esta_no_espeto = true;
+		}else{
+			esta_no_espeto = false;
+		}
+	};
+	
+	function morreNoEspeto(){
+	
+		if(esta_no_espeto){
+		
+			if (tocar_musica_morte_espeto == true){
+				audioGame.stop("musica_stage");
+				audioGame.play("morte_do_personagem");
+				tocar_musica_morte_espeto = false
+			}
+		
+			personagemMorreu = true;
+			pc.vy = -2*g;
+			tempoPersonagemParadoAoMorrer = 1
+			pc.altura_padrao_pulo = 10;
+			pc.h = -100;
+		}
+	};
+	
+	/*Definindo os limites da tela (direita e esquerda) que o personagem pode andar.*/
+	function limiteTela(){
+	
+		if (pc.x <= 15){
+			pc.x = 15;
+			pc.vx = 0;
+		}
+		
+		if (pc.x >= 885){
+			pc.x = 885;
+			pc.vx = 0;
+		}	
+	};
+	
+</script>
+</html>
