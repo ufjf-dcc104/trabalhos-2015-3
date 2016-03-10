@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<!--AS ARTES PRESENTE NESTE JOGO SÃO PROVENIENTES DA EMPRESA 'KENNEY LAND' http://kenney.nl/assets 
+EXCETO O HERÓI-->
+<link rel="stylesheet" type="text/css" href="style.css"/>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, user-scalable=0,minimum-scale=1.0, maximum-scale=1.0"/>
+		<title>Plataforma</title>
+		<script src="Sprite.js"></script>
+		<script src="constantes.js"></script>
+		<script src="mapa.js"></script>
+		<script src="hero.js"></script>
+		<script src="abelha.js"></script>
+		<script src="moeda.js"></script>
+		<script src="vida.js"></script>
+		<script src="passo.js"></script>
+		<script src="comandoJogo.js"></script>
+		<script src="trampolim.js"></script>
+		<script src="chaves.js"></script>
+	</head>
+	
+	<body>
+		<!--canvas width="600" height="300"-->
+		<canvas width="600" height="350">
+			Seu navegador nao tem suporte ao canvas!
+		</canvas>
+
+		<div id="myModal" class="modal">
+		  <div class="modal-content">
+		  	<center id="conteudo"></center>
+		  </div>
+		</div>
+		<br/>
+		<span style="display:none" id="spanBotao">
+			<button class='buttonModal' onclick="pauseJogo()">PAUSE</button>
+		</span>
+		<script>
+			var conteudo = document.getElementById("conteudo");
+			var modal = document.getElementById('myModal');
+			var span = document.getElementById('spanBotao');
+			var tela = document.getElementsByTagName("canvas")[0];
+			var ctx = tela.getContext("2d");
+			var inicioJogo=false;
+			var pause=true;
+			
+			var fps = 60;
+			var g = 60;
+			var dt = 1/fps;
+			var sprites = [];
+			var spritesMoedas = [];
+			var spritesTramp = [];
+			var spritesChaves = [];
+
+			criaAbelhas();
+			criaMoedas();
+			criaTrampolim();
+			criaChaves();
+
+			setInterval(rodarJogo, 1000/fps);
+
+			voltar();
+
+		</script>
+	</body>	
+</html>
